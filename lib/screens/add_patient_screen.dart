@@ -167,6 +167,82 @@ class _AddPatientScreenState extends ConsumerState<AddPatientScreen> {
     );
   }
 
+  void _showQuickAddDoctorDialog(BuildContext context) {
+    final nameCtrl = TextEditingController();
+    final specCtrl = TextEditingController(text: 'General Physician');
+    final formKey = GlobalKey<FormState>();
+
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.person_add_rounded),
+            SizedBox(width: 8),
+            Text('Quick Add Doctor'),
+          ],
+        ),
+        content: Form(
+          key: formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextFormField(
+                controller: nameCtrl,
+                textCapitalization: TextCapitalization.words,
+                autofocus: true,
+                decoration: const InputDecoration(
+                  labelText: 'Doctor Name *',
+                  hintText: 'e.g. Dr. Rajesh Sharma',
+                  prefixIcon: Icon(Icons.person),
+                ),
+                validator: (v) =>
+                    v == null || v.trim().isEmpty ? 'Doctor name required' : null,
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: specCtrl,
+                textCapitalization: TextCapitalization.words,
+                decoration: const InputDecoration(
+                  labelText: 'Specialization *',
+                  hintText: 'e.g. Cardiology, MBBS, Pediatrics',
+                  prefixIcon: Icon(Icons.medical_information),
+                ),
+                validator: (v) => v == null || v.trim().isEmpty
+                    ? 'Specialization required'
+                    : null,
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () async {
+              if (!formKey.currentState!.validate()) return;
+              Navigator.pop(context);
+              final newDoctor =
+                  await ref.read(doctorNotifierProvider.notifier).addDoctor(
+                        name: nameCtrl.text.trim(),
+                        specialization: specCtrl.text.trim(),
+                      );
+              if (mounted) {
+                setState(() {
+                  _selectedDoctorId = newDoctor.id;
+                  _selectedDoctorName = newDoctor.name;
+                });
+              }
+            },
+            child: const Text('Add & Select'),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _resetForm() {
     _formKey.currentState?.reset();
     _nameCtrl.clear();
@@ -282,101 +358,124 @@ class _AddPatientScreenState extends ConsumerState<AddPatientScreen> {
               _SectionHeader(title: 'Visit Details'),
               const SizedBox(height: 12),
 
-              // Doctor selection
-              doctorsAsync.when(
-                data: (doctors) {
-                  if (doctors.isEmpty) {
-                    return Container(
-                      padding: const EdgeInsets.all(14),
-                      decoration: BoxDecoration(
-                        color: Colors.amber.shade50,
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: Colors.amber.shade300),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Icon(Icons.info_outline,
-                                  color: Colors.amber.shade900),
-                              const SizedBox(width: 8),
-                              const Text(
-                                'No Active Doctors Found',
-                                style: TextStyle(fontWeight: FontWeight.bold),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 6),
-                          const Text(
-                            'Please add a doctor first to register patient serial numbers.',
-                            style: TextStyle(fontSize: 13),
-                          ),
-                          const SizedBox(height: 10),
-                          FilledButton.tonalIcon(
-                            onPressed: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (_) => const ManageDoctorsScreen(),
-                                ),
-                              );
-                            },
-                            icon: const Icon(Icons.add, size: 18),
-                            label: const Text('Add Doctor'),
-                          ),
-                        ],
-                      ),
-                    );
-                  }
+              // Doctor selection (Always visible with inline Quick-Add button)
+              Builder(builder: (context) {
+                final doctors = doctorsAsync.valueOrNull ?? [];
+                final activeDoctors =
+                    doctors.where((d) => d.isActive).toList();
 
-                  // Auto-select first doctor if none selected
-                  if (_selectedDoctorId == null ||
-                      !doctors.any((d) => d.id == _selectedDoctorId)) {
-                    WidgetsBinding.instance.addPostFrameCallback((_) {
-                      if (mounted) {
-                        setState(() {
-                          _selectedDoctorId = doctors.first.id;
-                          _selectedDoctorName = doctors.first.name;
-                        });
-                      }
-                    });
-                  }
+                // If currently selected doctor is valid, keep it; otherwise pick first if available
+                final hasSelected = activeDoctors
+                    .any((d) => d.id == _selectedDoctorId);
+                final effectiveValue = hasSelected
+                    ? _selectedDoctorId
+                    : (activeDoctors.isNotEmpty
+                        ? activeDoctors.first.id
+                        : null);
 
-                  final effectiveValue =
-                      doctors.any((d) => d.id == _selectedDoctorId)
-                          ? _selectedDoctorId
-                          : doctors.first.id;
+                // Auto-sync selected name if needed
+                if (!hasSelected && activeDoctors.isNotEmpty) {
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    if (mounted) {
+                      setState(() {
+                        _selectedDoctorId = activeDoctors.first.id;
+                        _selectedDoctorName = activeDoctors.first.name;
+                      });
+                    }
+                  });
+                }
 
-                  return DropdownButtonFormField<String>(
-                    value: effectiveValue,
-                    decoration: const InputDecoration(
-                      labelText: 'Assign Doctor *',
-                      prefixIcon: Icon(Icons.medical_services_outlined),
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: DropdownButtonFormField<String>(
+                            value: effectiveValue,
+                            isExpanded: true,
+                            decoration: InputDecoration(
+                              labelText: 'Assign Doctor *',
+                              prefixIcon: const Icon(
+                                  Icons.medical_services_outlined),
+                              helperText: activeDoctors.isEmpty
+                                  ? 'No doctors found. Tap + to add one.'
+                                  : 'Select attending doctor for this token',
+                            ),
+                            hint: activeDoctors.isEmpty
+                                ? const Text('No doctors available')
+                                : const Text('Select Doctor'),
+                            items: activeDoctors
+                                .map((d) => DropdownMenuItem(
+                                      value: d.id,
+                                      child: Text(
+                                        '${d.name} (${d.specialization})',
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ))
+                                .toList(),
+                            onChanged: activeDoctors.isEmpty
+                                ? null
+                                : (id) {
+                                    if (id != null) {
+                                      setState(() {
+                                        _selectedDoctorId = id;
+                                        _selectedDoctorName = activeDoctors
+                                            .firstWhere((d) => d.id == id)
+                                            .name;
+                                      });
+                                    }
+                                  },
+                            validator: (_) => (_selectedDoctorId == null ||
+                                    _selectedDoctorId!.isEmpty)
+                                ? 'Please select or add a doctor'
+                                : null,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Padding(
+                          padding: const EdgeInsets.only(top: 4),
+                          child: IconButton.filledTonal(
+                            icon: const Icon(Icons.person_add_rounded),
+                            tooltip: 'Quick Add Doctor',
+                            onPressed: () =>
+                                _showQuickAddDoctorDialog(context),
+                          ),
+                        ),
+                      ],
                     ),
-                    items: doctors
-                        .map((d) => DropdownMenuItem(
-                              value: d.id,
-                              child: Text('${d.name} (${d.specialization})'),
-                            ))
-                        .toList(),
-                    onChanged: (id) {
-                      if (id != null) {
-                        setState(() {
-                          _selectedDoctorId = id;
-                          _selectedDoctorName =
-                              doctors.firstWhere((d) => d.id == id).name;
-                        });
-                      }
-                    },
-                    validator: (_) => _selectedDoctorId == null
-                        ? 'Select a doctor'
-                        : null,
-                  );
-                },
-                loading: () => const LinearProgressIndicator(),
-                error: (e, _) => Text('Error loading doctors: $e'),
-              ),
+                    if (activeDoctors.isEmpty) ...[
+                      const SizedBox(height: 8),
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.amber.shade50,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.amber.shade300),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(Icons.info_outline,
+                                color: Colors.amber.shade900, size: 20),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                'No active doctors registered yet. Tap the (+) button above to add one immediately.',
+                                style: TextStyle(
+                                  color: Colors.amber.shade900,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ],
+                );
+              }),
               const SizedBox(height: 12),
 
               TextFormField(

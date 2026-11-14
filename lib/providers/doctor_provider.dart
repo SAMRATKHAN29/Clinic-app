@@ -41,7 +41,7 @@ class DoctorNotifier extends StateNotifier<AsyncValue<List<Doctor>>> {
   final SqliteService _sqliteService;
 
   DoctorNotifier(this._firestoreService, this._sqliteService)
-      : super(const AsyncValue.loading()) {
+      : super(const AsyncValue.data([])) {
     _init();
   }
 
@@ -51,9 +51,12 @@ class DoctorNotifier extends StateNotifier<AsyncValue<List<Doctor>>> {
       final local = await _sqliteService.getAllDoctors();
       if (local.isNotEmpty) {
         state = AsyncValue.data(local);
+      } else {
+        await _seedDefaultDoctors();
       }
     } catch (e) {
       debugPrint('Local SQLite load error: $e');
+      await _seedDefaultDoctors();
     }
 
     // 2. Subscribe to Firestore real-time updates
@@ -115,7 +118,7 @@ class DoctorNotifier extends StateNotifier<AsyncValue<List<Doctor>>> {
     state = AsyncValue.data(defaultDoctors);
   }
 
-  Future<void> addDoctor({
+  Future<Doctor> addDoctor({
     required String name,
     required String specialization,
     String? phone,
@@ -147,8 +150,10 @@ class DoctorNotifier extends StateNotifier<AsyncValue<List<Doctor>>> {
           .map((d) => d.id == tempId ? withId : d)
           .toList();
       state = AsyncValue.data(updated);
+      return withId;
     } catch (e) {
       debugPrint('Added doctor locally (offline): $e');
+      return doctor;
     }
   }
 
