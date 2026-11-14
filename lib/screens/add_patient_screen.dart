@@ -254,6 +254,8 @@ class _AddPatientScreenState extends ConsumerState<AddPatientScreen> {
     setState(() {
       _gender = 'Male';
       _savedPatient = null;
+      _selectedDoctorId = null;
+      _selectedDoctorName = null;
     });
   }
 
@@ -364,26 +366,10 @@ class _AddPatientScreenState extends ConsumerState<AddPatientScreen> {
                 final activeDoctors =
                     doctors.where((d) => d.isActive).toList();
 
-                // If currently selected doctor is valid, keep it; otherwise pick first if available
-                final hasSelected = activeDoctors
-                    .any((d) => d.id == _selectedDoctorId);
-                final effectiveValue = hasSelected
+                // Keep selection blank by default; staff must explicitly choose
+                final effectiveValue = (activeDoctors.any((d) => d.id == _selectedDoctorId))
                     ? _selectedDoctorId
-                    : (activeDoctors.isNotEmpty
-                        ? activeDoctors.first.id
-                        : null);
-
-                // Auto-sync selected name if needed
-                if (!hasSelected && activeDoctors.isNotEmpty) {
-                  WidgetsBinding.instance.addPostFrameCallback((_) {
-                    if (mounted) {
-                      setState(() {
-                        _selectedDoctorId = activeDoctors.first.id;
-                        _selectedDoctorName = activeDoctors.first.name;
-                      });
-                    }
-                  });
-                }
+                    : null;
 
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -405,7 +391,7 @@ class _AddPatientScreenState extends ConsumerState<AddPatientScreen> {
                             ),
                             hint: activeDoctors.isEmpty
                                 ? const Text('No doctors available')
-                                : const Text('Select Doctor'),
+                                : const Text('-- Select Doctor --'),
                             items: activeDoctors
                                 .map((d) => DropdownMenuItem(
                                       value: d.id,
