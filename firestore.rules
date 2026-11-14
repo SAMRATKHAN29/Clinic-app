@@ -1,0 +1,33 @@
+// Firestore Security Rules
+// Deploy via: firebase deploy --only firestore:rules
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ── Doctors collection ──────────────────────────────────────────────────
+    // Any authenticated user can read; write requires auth
+    match /doctors/{doctorId} {
+      allow read: if request.auth != null;
+      allow create, update, delete: if request.auth != null;
+    }
+
+    // ── Patients collection ─────────────────────────────────────────────────
+    match /patients/{patientId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null
+        && request.resource.data.keys().hasAll([
+            'name', 'age', 'gender', 'doctorId', 'doctorName',
+            'serialNumber', 'visitDate', 'addedByStaff', 'createdAt'
+           ])
+        && request.resource.data.name is string
+        && request.resource.data.name.size() > 0
+        && request.resource.data.age is int
+        && request.resource.data.age >= 0
+        && request.resource.data.serialNumber is int
+        && request.resource.data.serialNumber > 0;
+      allow update, delete: if request.auth != null;
+    }
+  }
+}
+
