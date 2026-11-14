@@ -36,6 +36,26 @@
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
+
+        <!-- FileProvider required by ota_update to share downloaded APK with Android PackageInstaller -->
+        <provider
+            android:name="sk.fourq.otaupdate.OtaUpdateFileProvider"
+            android:authorities="${applicationId}.ota_update_provider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/filepaths" />
+        </provider>
+
+        <!-- Receiver for OTA installation status results -->
+        <receiver
+            android:name="sk.fourq.otaupdate.InstallResultReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="${applicationId}.ACTION_INSTALL_COMPLETE" />
+            </intent-filter>
+        </receiver>
     </application>
     <!-- Required to query activities that can process text, see:
          https://developer.android.com/training/package-visibility and

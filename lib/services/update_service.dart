@@ -37,8 +37,8 @@ class AppUpdateInfo {
 }
 
 class UpdateService {
-  static const String currentVersion = '1.0.3';
-  static const int currentVersionCode = 4;
+  static const String currentVersion = '1.0.4';
+  static const int currentVersionCode = 5;
   static const String developerName = 'Samrat Khan';
 
   final FirebaseFirestore _db = FirebaseFirestore.instance;
@@ -167,6 +167,8 @@ class _UpdateDialogState extends State<_UpdateDialog> {
         widget.info.downloadUrl,
         destinationFilename:
             'ClinicManager_v${widget.info.latestVersion}.apk',
+        androidProviderAuthority:
+            'com.example.clinic_app.ota_update_provider',
       )
           .listen(
         (OtaEvent event) {
