@@ -49,27 +49,73 @@ class ClinicApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    const primaryColor = Color(0xFF0F766E); // Modern Deep Teal
+    const secondaryColor = Color(0xFF0284C7); // Vibrant Sky Cyan
+
     return MaterialApp(
       title: 'Clinic Manager',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF1565C0),
+          seedColor: primaryColor,
+          primary: primaryColor,
+          secondary: secondaryColor,
+          surface: Colors.white,
           brightness: Brightness.light,
         ),
+        scaffoldBackgroundColor: const Color(0xFFF8FAFC), // Modern slate 50
         useMaterial3: true,
-        cardTheme: const CardThemeData(
-          elevation: 2,
+        cardTheme: CardThemeData(
+          color: Colors.white,
+          elevation: 0,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+            side: const BorderSide(color: Color(0xFFE2E8F0)),
+          ),
           margin: EdgeInsets.zero,
         ),
-        inputDecorationTheme: const InputDecorationTheme(
-          border: OutlineInputBorder(),
+        inputDecorationTheme: InputDecorationTheme(
+          filled: true,
+          fillColor: const Color(0xFFF1F5F9),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: const BorderSide(color: primaryColor, width: 1.8),
+          ),
           contentPadding:
-              EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          labelStyle: const TextStyle(fontSize: 14, color: Color(0xFF475569)),
+        ),
+        filledButtonTheme: FilledButtonThemeData(
+          style: FilledButton.styleFrom(
+            backgroundColor: primaryColor,
+            foregroundColor: Colors.white,
+            elevation: 0,
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            textStyle:
+                const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+          ),
         ),
         appBarTheme: const AppBarTheme(
           centerTitle: false,
           elevation: 0,
+          scrolledUnderElevation: 0,
+          backgroundColor: Colors.white,
+          foregroundColor: Color(0xFF0F172A),
+          titleTextStyle: TextStyle(
+            color: Color(0xFF0F172A),
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+          ),
         ),
       ),
       home: const SplashScreen(nextScreen: StaffNameGate()),
@@ -117,8 +163,6 @@ class _StaffNamePromptScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final colorScheme = Theme.of(context).colorScheme;
-
     Future<void> save() async {
       final name = controller.text.trim();
       if (name.isEmpty) return;
@@ -128,85 +172,114 @@ class _StaffNamePromptScreen extends ConsumerWidget {
     }
 
     return Scaffold(
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [colorScheme.primaryContainer, colorScheme.surface],
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-          ),
-        ),
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(32),
-            child: Card(
-              child: Padding(
-                padding: const EdgeInsets.all(32),
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 400),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Icon(
-                        Icons.local_hospital_rounded,
-                        size: 64,
-                        color: colorScheme.primary,
+      backgroundColor: const Color(0xFFF1F5F9),
+      body: Center(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(24),
+          child: Container(
+            constraints: const BoxConstraints(maxWidth: 440),
+            padding: const EdgeInsets.all(36),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(24),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.06),
+                  blurRadius: 32,
+                  offset: const Offset(0, 8),
+                ),
+              ],
+              border: Border.all(color: const Color(0xFFE2E8F0)),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Center(
+                  child: Container(
+                    width: 72,
+                    height: 72,
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFF0F766E), Color(0xFF0284C7)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
                       ),
-                      const SizedBox(height: 16),
-                      Text(
-                        'Clinic Manager',
-                        textAlign: TextAlign.center,
-                        style: Theme.of(context)
-                            .textTheme
-                            .headlineMedium
-                            ?.copyWith(
-                              fontWeight: FontWeight.bold,
-                              color: colorScheme.primary,
-                            ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Please enter your name to continue',
-                        textAlign: TextAlign.center,
-                        style: Theme.of(context)
-                            .textTheme
-                            .bodyMedium
-                            ?.copyWith(color: colorScheme.onSurfaceVariant),
-                      ),
-                      const SizedBox(height: 32),
-                      TextField(
-                        controller: controller,
-                        textCapitalization: TextCapitalization.words,
-                        decoration: const InputDecoration(
-                          labelText: 'Staff Name',
-                          hintText: 'e.g. Dr. Priya, Nurse Ravi…',
-                          prefixIcon: Icon(Icons.person_outline),
+                      borderRadius: BorderRadius.circular(20),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFF0F766E).withOpacity(0.25),
+                          blurRadius: 16,
+                          offset: const Offset(0, 6),
                         ),
-                        onSubmitted: (_) => save(),
-                      ),
-                      const SizedBox(height: 20),
-                      FilledButton.icon(
-                        onPressed: save,
-                        icon: const Icon(Icons.arrow_forward),
-                        label: const Text('Continue'),
-                        style: FilledButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                        ),
-                      ),
-                      const SizedBox(height: 24),
-                      Text(
-                        'A clinical application, developed by Samrat Khan',
-                        textAlign: TextAlign.center,
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: colorScheme.outline,
-                              fontWeight: FontWeight.w500,
-                            ),
-                      ),
-                    ],
+                      ],
+                    ),
+                    child: const Icon(
+                      Icons.local_hospital_rounded,
+                      size: 40,
+                      color: Colors.white,
+                    ),
                   ),
                 ),
-              ),
+                const SizedBox(height: 20),
+                Text(
+                  'Clinic Manager',
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: const Color(0xFF0F172A),
+                        letterSpacing: -0.5,
+                      ),
+                ),
+                const SizedBox(height: 6),
+                const Text(
+                  'Welcome! Enter staff name to start session',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: Color(0xFF64748B),
+                    fontSize: 14,
+                  ),
+                ),
+                const SizedBox(height: 28),
+                TextField(
+                  controller: controller,
+                  textCapitalization: TextCapitalization.words,
+                  decoration: const InputDecoration(
+                    labelText: 'Staff Name',
+                    hintText: 'e.g. Dr. Priya, Staff Nurse Ravi…',
+                    prefixIcon: Icon(Icons.badge_outlined),
+                  ),
+                  onSubmitted: (_) => save(),
+                ),
+                const SizedBox(height: 20),
+                FilledButton.icon(
+                  onPressed: save,
+                  icon: const Icon(Icons.arrow_forward_rounded, size: 18),
+                  label: const Text('Start Workstation'),
+                  style: FilledButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                  ),
+                ),
+                const SizedBox(height: 24),
+                const Divider(),
+                const SizedBox(height: 12),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.verified_user_rounded,
+                        size: 14, color: Color(0xFF0F766E)),
+                    const SizedBox(width: 6),
+                    Text(
+                      'Developed by Samrat Khan',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.blueGrey.shade800,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ),
           ),
         ),

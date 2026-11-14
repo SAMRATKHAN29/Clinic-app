@@ -190,58 +190,152 @@ class _DoctorCard extends StatelessWidget {
     final colorScheme = Theme.of(context).colorScheme;
     final isActive = doctor.isActive;
 
-    return Card(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: ListTile(
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        leading: CircleAvatar(
-          backgroundColor: isActive
-              ? colorScheme.primaryContainer
-              : colorScheme.surfaceContainerHighest,
-          child: Icon(
-            Icons.medical_services_rounded,
-            color: isActive
-                ? colorScheme.onPrimaryContainer
-                : colorScheme.onSurfaceVariant,
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: isActive
+              ? const Color(0xFFE2E8F0)
+              : const Color(0xFFF1F5F9),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.02),
+            blurRadius: 8,
+            offset: const Offset(0, 3),
           ),
-        ),
-        title: Text(
-          doctor.name,
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            color: isActive ? null : colorScheme.onSurfaceVariant,
-          ),
-        ),
-        subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        child: Row(
           children: [
-            Text(doctor.specialization),
-            if (doctor.phone != null && doctor.phone!.isNotEmpty)
-              Text(doctor.phone!,
-                  style: Theme.of(context).textTheme.bodySmall),
-          ],
-        ),
-        trailing: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Active/inactive toggle
+            Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: isActive
+                      ? [const Color(0xFF0F766E), const Color(0xFF0284C7)]
+                      : [Colors.grey.shade400, Colors.grey.shade600],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: Center(
+                child: Text(
+                  doctor.name.isNotEmpty
+                      ? doctor.name[0].toUpperCase()
+                      : 'D',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 18,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Text(
+                        'Dr. ${doctor.name}',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 15,
+                          color: isActive
+                              ? const Color(0xFF0F172A)
+                              : Colors.grey.shade600,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: isActive
+                              ? Colors.green.shade50
+                              : Colors.grey.shade100,
+                          borderRadius: BorderRadius.circular(6),
+                          border: Border.all(
+                            color: isActive
+                                ? Colors.green.shade200
+                                : Colors.grey.shade300,
+                          ),
+                        ),
+                        child: Text(
+                          isActive ? 'Active' : 'On Leave',
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                            color: isActive
+                                ? Colors.green.shade800
+                                : Colors.grey.shade600,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    doctor.specialization,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      color: Color(0xFF64748B),
+                    ),
+                  ),
+                  if (doctor.phone != null && doctor.phone!.isNotEmpty) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      '📞 ${doctor.phone}',
+                      style: const TextStyle(
+                        fontSize: 11,
+                        color: Color(0xFF94A3B8),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
             Switch.adaptive(
               value: isActive,
               onChanged: (_) => onToggle(),
-              activeColor: colorScheme.primary,
+              activeTrackColor: const Color(0xFF0F766E),
             ),
             PopupMenuButton<String>(
+              icon: const Icon(Icons.more_vert_rounded,
+                  color: Color(0xFF64748B)),
               itemBuilder: (_) => [
                 const PopupMenuItem(
-                    value: 'edit', child: Text('Edit')),
+                  value: 'edit',
+                  child: Row(
+                    children: [
+                      Icon(Icons.edit_outlined, size: 18),
+                      SizedBox(width: 8),
+                      Text('Edit Doctor'),
+                    ],
+                  ),
+                ),
                 const PopupMenuItem(
-                    value: 'delete',
-                    child: Text('Delete',
-                        style: TextStyle(color: Colors.red))),
+                  value: 'delete',
+                  child: Row(
+                    children: [
+                      Icon(Icons.delete_outline_rounded,
+                          size: 18, color: Colors.red),
+                      SizedBox(width: 8),
+                      Text('Delete Doctor',
+                          style: TextStyle(color: Colors.red)),
+                    ],
+                  ),
+                ),
               ],
-              onSelected: (a) =>
-                  a == 'edit' ? onEdit() : onDelete(),
+              onSelected: (a) => a == 'edit' ? onEdit() : onDelete(),
             ),
           ],
         ),

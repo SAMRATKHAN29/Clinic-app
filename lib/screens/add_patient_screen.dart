@@ -333,245 +333,318 @@ class _AddPatientScreenState extends ConsumerState<AddPatientScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-            widget.editPatient != null ? 'Edit Patient' : 'Add Patient'),
-        backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+          widget.editPatient != null ? 'Edit Patient Record' : 'Register New Patient',
+          style: const TextStyle(fontWeight: FontWeight.bold),
+        ),
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
         child: Form(
           key: _formKey,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              _SectionHeader(title: 'Patient Information'),
-              const SizedBox(height: 12),
-
-              // Name
-              TextFormField(
-                controller: _nameCtrl,
-                textCapitalization: TextCapitalization.words,
-                decoration: const InputDecoration(
-                  labelText: 'Full Name *',
-                  prefixIcon: Icon(Icons.person_outline),
-                ),
-                validator: (v) =>
-                    v == null || v.trim().isEmpty ? 'Name is required' : null,
-              ),
-              const SizedBox(height: 12),
-
-              Row(
-                children: [
-                  Expanded(
-                    child: TextFormField(
-                      controller: _ageCtrl,
-                      keyboardType: TextInputType.number,
-                      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                      decoration: const InputDecoration(
-                        labelText: 'Age *',
-                        prefixIcon: Icon(Icons.cake_outlined),
-                      ),
-                      validator: (v) {
-                        if (v == null || v.trim().isEmpty) {
-                          return 'Required';
-                        }
-                        final n = int.tryParse(v);
-                        if (n == null || n < 0 || n > 150) {
-                          return 'Invalid age';
-                        }
-                        return null;
-                      },
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: DropdownButtonFormField<String>(
-                      value: _gender,
-                      decoration: const InputDecoration(
-                        labelText: 'Gender *',
-                        prefixIcon: Icon(Icons.wc_outlined),
-                      ),
-                      items: ['Male', 'Female', 'Other']
-                          .map((g) =>
-                              DropdownMenuItem(value: g, child: Text(g)))
-                          .toList(),
-                      onChanged: (v) => setState(() => _gender = v!),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-
-              TextFormField(
-                controller: _phoneCtrl,
-                keyboardType: TextInputType.phone,
-                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                decoration: const InputDecoration(
-                  labelText: 'Phone Number',
-                  prefixIcon: Icon(Icons.phone_outlined),
-                ),
-              ),
-              const SizedBox(height: 12),
-
-              TextFormField(
-                controller: _addressCtrl,
-                maxLines: 2,
-                textCapitalization: TextCapitalization.sentences,
-                decoration: const InputDecoration(
-                  labelText: 'Address',
-                  prefixIcon: Icon(Icons.home_outlined),
-                  alignLabelWithHint: true,
-                ),
-              ),
-              const SizedBox(height: 20),
-
-              _SectionHeader(title: 'Visit Details'),
-              const SizedBox(height: 12),
-
-              // Appointment Date (Mandatory, default blank, auto-computes day of week)
-              TextFormField(
-                controller: _dateCtrl,
-                readOnly: true,
-                onTap: _pickAppointmentDate,
-                decoration: const InputDecoration(
-                  labelText: 'Appointment Date *',
-                  hintText: 'Tap to select appointment date',
-                  prefixIcon: Icon(Icons.calendar_month_rounded),
-                  suffixIcon: Icon(Icons.arrow_drop_down),
-                  helperText: 'Day of week is calculated automatically',
-                ),
-                validator: (v) => _selectedDate == null
-                    ? 'Appointment date is required'
-                    : null,
-              ),
-              const SizedBox(height: 12),
-
-              // Doctor selection (Always visible with inline Quick-Add button)
-              Builder(builder: (context) {
-                final doctors = doctorsAsync.valueOrNull ?? [];
-                final activeDoctors =
-                    doctors.where((d) => d.isActive).toList();
-
-                // Keep selection blank by default; staff must explicitly choose
-                final effectiveValue = (activeDoctors.any((d) => d.id == _selectedDoctorId))
-                    ? _selectedDoctorId
-                    : null;
-
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+              // Patient Info Card
+              _FormCard(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
+                    const _SectionHeader(
+                      title: 'Patient Demographics',
+                      icon: Icons.person_rounded,
+                    ),
+                    const SizedBox(height: 14),
+
+                    // Full Name
+                    TextFormField(
+                      controller: _nameCtrl,
+                      textCapitalization: TextCapitalization.words,
+                      decoration: const InputDecoration(
+                        labelText: 'Full Name *',
+                        hintText: 'Enter patient full name',
+                        prefixIcon: Icon(Icons.badge_outlined),
+                      ),
+                      validator: (v) => v == null || v.trim().isEmpty
+                          ? 'Name is required'
+                          : null,
+                    ),
+                    const SizedBox(height: 14),
+
                     Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Expanded(
-                          child: DropdownButtonFormField<String>(
-                            value: effectiveValue,
-                            isExpanded: true,
-                            decoration: InputDecoration(
-                              labelText: 'Assign Doctor *',
-                              prefixIcon: const Icon(
-                                  Icons.medical_services_outlined),
-                              helperText: activeDoctors.isEmpty
-                                  ? 'No doctors found. Tap + to add one.'
-                                  : 'Select attending doctor for this token',
+                          flex: 2,
+                          child: TextFormField(
+                            controller: _ageCtrl,
+                            keyboardType: TextInputType.number,
+                            inputFormatters: [
+                              FilteringTextInputFormatter.digitsOnly
+                            ],
+                            decoration: const InputDecoration(
+                              labelText: 'Age (Years) *',
+                              hintText: 'e.g. 34',
+                              prefixIcon: Icon(Icons.cake_outlined),
                             ),
-                            hint: activeDoctors.isEmpty
-                                ? const Text('No doctors available')
-                                : const Text('-- Select Doctor --'),
-                            items: activeDoctors
-                                .map((d) => DropdownMenuItem(
-                                      value: d.id,
-                                      child: Text(
-                                        '${d.name} (${d.specialization})',
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                    ))
-                                .toList(),
-                            onChanged: activeDoctors.isEmpty
-                                ? null
-                                : (id) {
-                                    if (id != null) {
-                                      setState(() {
-                                        _selectedDoctorId = id;
-                                        _selectedDoctorName = activeDoctors
-                                            .firstWhere((d) => d.id == id)
-                                            .name;
-                                      });
-                                    }
-                                  },
-                            validator: (_) => (_selectedDoctorId == null ||
-                                    _selectedDoctorId!.isEmpty)
-                                ? 'Please select or add a doctor'
-                                : null,
+                            validator: (v) {
+                              if (v == null || v.trim().isEmpty) {
+                                return 'Required';
+                              }
+                              final n = int.tryParse(v);
+                              if (n == null || n < 0 || n > 150) {
+                                return 'Invalid age';
+                              }
+                              return null;
+                            },
                           ),
                         ),
-                        const SizedBox(width: 8),
-                        Padding(
-                          padding: const EdgeInsets.only(top: 4),
-                          child: IconButton.filledTonal(
-                            icon: const Icon(Icons.person_add_rounded),
-                            tooltip: 'Quick Add Doctor',
-                            onPressed: () =>
-                                _showQuickAddDoctorDialog(context),
+                        const SizedBox(width: 14),
+                        Expanded(
+                          flex: 3,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'Gender *',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  color: Color(0xFF64748B),
+                                ),
+                              ),
+                              const SizedBox(height: 6),
+                              Row(
+                                children: ['Male', 'Female', 'Other'].map((g) {
+                                  final isSelected = _gender == g;
+                                  return Padding(
+                                    padding: const EdgeInsets.only(right: 6),
+                                    child: ChoiceChip(
+                                      label: Text(g),
+                                      selected: isSelected,
+                                      selectedColor: const Color(0xFF0F766E),
+                                      labelStyle: TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: isSelected
+                                            ? FontWeight.bold
+                                            : FontWeight.normal,
+                                        color: isSelected
+                                            ? Colors.white
+                                            : const Color(0xFF334155),
+                                      ),
+                                      onSelected: (_) =>
+                                          setState(() => _gender = g),
+                                    ),
+                                  );
+                                }).toList(),
+                              ),
+                            ],
                           ),
                         ),
                       ],
                     ),
-                    if (activeDoctors.isEmpty) ...[
-                      const SizedBox(height: 8),
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: Colors.amber.shade50,
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: Colors.amber.shade300),
-                        ),
-                        child: Row(
-                          children: [
-                            Icon(Icons.info_outline,
-                                color: Colors.amber.shade900, size: 20),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Text(
-                                'No active doctors registered yet. Tap the (+) button above to add one immediately.',
-                                style: TextStyle(
-                                  color: Colors.amber.shade900,
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w500,
+                    const SizedBox(height: 14),
+
+                    TextFormField(
+                      controller: _phoneCtrl,
+                      keyboardType: TextInputType.phone,
+                      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                      decoration: const InputDecoration(
+                        labelText: 'Phone Number (Optional)',
+                        hintText: '10-digit mobile number',
+                        prefixIcon: Icon(Icons.phone_outlined),
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+
+                    TextFormField(
+                      controller: _addressCtrl,
+                      maxLines: 2,
+                      textCapitalization: TextCapitalization.sentences,
+                      decoration: const InputDecoration(
+                        labelText: 'Residential Address (Optional)',
+                        hintText: 'City, area or address details',
+                        prefixIcon: Icon(Icons.home_outlined),
+                        alignLabelWithHint: true,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              // Visit Details Card
+              _FormCard(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    const _SectionHeader(
+                      title: 'Appointment & Doctor',
+                      icon: Icons.calendar_month_rounded,
+                    ),
+                    const SizedBox(height: 14),
+
+                    // Appointment Date
+                    TextFormField(
+                      controller: _dateCtrl,
+                      readOnly: true,
+                      onTap: _pickAppointmentDate,
+                      decoration: const InputDecoration(
+                        labelText: 'Appointment Date *',
+                        hintText: 'Tap to pick appointment date',
+                        prefixIcon: Icon(Icons.calendar_month_rounded),
+                        suffixIcon: Icon(Icons.arrow_drop_down),
+                        helperText: 'Day of week is computed automatically',
+                      ),
+                      validator: (v) => _selectedDate == null
+                          ? 'Appointment date is required'
+                          : null,
+                    ),
+                    const SizedBox(height: 14),
+
+                    // Doctor selection
+                    Builder(builder: (context) {
+                      final doctors = doctorsAsync.valueOrNull ?? [];
+                      final activeDoctors =
+                          doctors.where((d) => d.isActive).toList();
+                      final effectiveValue = (activeDoctors
+                              .any((d) => d.id == _selectedDoctorId))
+                          ? _selectedDoctorId
+                          : null;
+
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Expanded(
+                                child: DropdownButtonFormField<String>(
+                                  value: effectiveValue,
+                                  isExpanded: true,
+                                  decoration: InputDecoration(
+                                    labelText: 'Assign Doctor *',
+                                    prefixIcon: const Icon(
+                                        Icons.medical_services_outlined),
+                                    helperText: activeDoctors.isEmpty
+                                        ? 'No doctors found. Tap + to add one.'
+                                        : 'Select attending physician',
+                                  ),
+                                  hint: activeDoctors.isEmpty
+                                      ? const Text('No doctors available')
+                                      : const Text('-- Select Doctor --'),
+                                  items: activeDoctors
+                                      .map((d) => DropdownMenuItem(
+                                            value: d.id,
+                                            child: Text(
+                                              '${d.name} (${d.specialization})',
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                          ))
+                                      .toList(),
+                                  onChanged: activeDoctors.isEmpty
+                                      ? null
+                                      : (id) {
+                                          if (id != null) {
+                                            setState(() {
+                                              _selectedDoctorId = id;
+                                              _selectedDoctorName = activeDoctors
+                                                  .firstWhere((d) => d.id == id)
+                                                  .name;
+                                            });
+                                          }
+                                        },
+                                  validator: (_) => (_selectedDoctorId ==
+                                              null ||
+                                          _selectedDoctorId!.isEmpty)
+                                      ? 'Please select or add a doctor'
+                                      : null,
                                 ),
+                              ),
+                              const SizedBox(width: 8),
+                              Padding(
+                                padding: const EdgeInsets.only(top: 4),
+                                child: IconButton.filledTonal(
+                                  icon: const Icon(Icons.person_add_rounded),
+                                  tooltip: 'Quick Add Doctor',
+                                  onPressed: () =>
+                                      _showQuickAddDoctorDialog(context),
+                                ),
+                              ),
+                            ],
+                          ),
+                          if (activeDoctors.isEmpty) ...[
+                            const SizedBox(height: 8),
+                            Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: Colors.amber.shade50,
+                                borderRadius: BorderRadius.circular(8),
+                                border:
+                                    Border.all(color: Colors.amber.shade300),
+                              ),
+                              child: Row(
+                                children: [
+                                  Icon(Icons.info_outline,
+                                      color: Colors.amber.shade900, size: 20),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(
+                                      'No active doctors registered yet. Tap the (+) button above to add one immediately.',
+                                      style: TextStyle(
+                                        color: Colors.amber.shade900,
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
                           ],
-                        ),
-                      ),
-                    ],
+                        ],
+                      );
+                    }),
                   ],
-                );
-              }),
-              const SizedBox(height: 12),
-
-              TextFormField(
-                controller: _complaintCtrl,
-                maxLines: 2,
-                textCapitalization: TextCapitalization.sentences,
-                decoration: const InputDecoration(
-                  labelText: 'Chief Complaint',
-                  prefixIcon: Icon(Icons.sick_outlined),
-                  alignLabelWithHint: true,
                 ),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 16),
 
-              TextFormField(
-                controller: _diagnosisCtrl,
-                maxLines: 2,
-                textCapitalization: TextCapitalization.sentences,
-                decoration: const InputDecoration(
-                  labelText: 'Diagnosis (optional)',
-                  prefixIcon: Icon(Icons.note_alt_outlined),
-                  alignLabelWithHint: true,
+              // Clinical Notes Card
+              _FormCard(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    const _SectionHeader(
+                      title: 'Consultation Notes (Optional)',
+                      icon: Icons.note_alt_outlined,
+                    ),
+                    const SizedBox(height: 14),
+                    TextFormField(
+                      controller: _complaintCtrl,
+                      maxLines: 2,
+                      textCapitalization: TextCapitalization.sentences,
+                      decoration: const InputDecoration(
+                        labelText: 'Chief Complaint',
+                        hintText: 'e.g. Fever for 3 days, cough, headache…',
+                        prefixIcon: Icon(Icons.sick_outlined),
+                        alignLabelWithHint: true,
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                    TextFormField(
+                      controller: _diagnosisCtrl,
+                      maxLines: 2,
+                      textCapitalization: TextCapitalization.sentences,
+                      decoration: const InputDecoration(
+                        labelText: 'Provisional Diagnosis / Remarks',
+                        hintText: 'e.g. Viral URI, Blood test advised…',
+                        prefixIcon: Icon(Icons.medical_information_outlined),
+                        alignLabelWithHint: true,
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              const SizedBox(height: 28),
+              const SizedBox(height: 24),
 
               FilledButton.icon(
                 onPressed: _isSaving ? null : _save,
@@ -582,14 +655,17 @@ class _AddPatientScreenState extends ConsumerState<AddPatientScreen> {
                         child: CircularProgressIndicator(
                             strokeWidth: 2, color: Colors.white),
                       )
-                    : const Icon(Icons.save_outlined),
-                label: Text(_isSaving
-                    ? 'Saving…'
-                    : widget.editPatient != null
-                        ? 'Update Patient'
-                        : 'Add Patient'),
+                    : const Icon(Icons.check_circle_outline_rounded),
+                label: Text(
+                  _isSaving
+                      ? 'Generating Token…'
+                      : widget.editPatient != null
+                          ? 'Update Patient Record'
+                          : 'Save & Generate Token',
+                  style: const TextStyle(fontSize: 16),
+                ),
                 style: FilledButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  padding: const EdgeInsets.symmetric(vertical: 18),
                 ),
               ),
             ],
@@ -602,29 +678,56 @@ class _AddPatientScreenState extends ConsumerState<AddPatientScreen> {
 
 class _SectionHeader extends StatelessWidget {
   final String title;
-  const _SectionHeader({required this.title});
+  final IconData icon;
+  const _SectionHeader({required this.title, required this.icon});
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 4),
-      child: Row(
-        children: [
-          Text(
-            title,
-            style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: Theme.of(context).colorScheme.primary,
-                ),
+    return Row(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(6),
+          decoration: BoxDecoration(
+            color: const Color(0xFF0F766E).withOpacity(0.12),
+            borderRadius: BorderRadius.circular(8),
           ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Divider(
-              color: Theme.of(context).colorScheme.primary.withOpacity(0.3),
-            ),
+          child: Icon(icon, size: 16, color: const Color(0xFF0F766E)),
+        ),
+        const SizedBox(width: 10),
+        Text(
+          title,
+          style: const TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 14,
+            color: Color(0xFF0F172A),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _FormCard extends StatelessWidget {
+  final Widget child;
+  const _FormCard({required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.02),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
+      child: child,
     );
   }
 }

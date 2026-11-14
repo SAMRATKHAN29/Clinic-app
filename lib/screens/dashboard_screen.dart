@@ -46,31 +46,75 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
-          'Clinic Manager',
-          style: TextStyle(fontWeight: FontWeight.bold),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                color: const Color(0xFF0F766E),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Icon(Icons.local_hospital_rounded,
+                  color: Colors.white, size: 20),
+            ),
+            const SizedBox(width: 10),
+            const Text(
+              'Clinic Manager',
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 19,
+                letterSpacing: -0.3,
+              ),
+            ),
+          ],
         ),
-        backgroundColor: colorScheme.primaryContainer,
         actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 4),
-            child: Chip(
-              avatar: const Icon(Icons.person, size: 16),
-              label: Text(staffName),
-              backgroundColor: colorScheme.primary,
-              labelStyle: TextStyle(color: colorScheme.onPrimary, fontSize: 12),
+          Container(
+            margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF1F5F9),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: const Color(0xFFE2E8F0)),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CircleAvatar(
+                  radius: 12,
+                  backgroundColor: const Color(0xFF0F766E),
+                  child: Text(
+                    staffName.isNotEmpty ? staffName[0].toUpperCase() : 'S',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  staffName,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 13,
+                    color: Color(0xFF1E293B),
+                  ),
+                ),
+              ],
             ),
           ),
           IconButton(
-            icon: const Icon(Icons.edit_outlined),
+            icon: const Icon(Icons.edit_outlined, size: 20),
             tooltip: 'Change staff name',
             onPressed: () => _showChangeNameDialog(context, staffName),
           ),
           IconButton(
-            icon: const Icon(Icons.info_outline_rounded),
+            icon: const Icon(Icons.info_outline_rounded, size: 20),
             tooltip: 'About app',
             onPressed: () => _showAboutDialog(context),
           ),
+          const SizedBox(width: 8),
         ],
       ),
       body: SingleChildScrollView(
@@ -97,8 +141,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                 _DashboardTile(
                   icon: Icons.person_add_alt_1_rounded,
                   label: 'Add Patient',
-                  description: 'Register a new patient visit',
-                  color: const Color(0xFF1565C0),
+                  description: 'Register a new patient & generate token',
+                  color: const Color(0xFF0F766E),
                   onTap: () => Navigator.push(
                     context,
                     MaterialPageRoute(
@@ -106,10 +150,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                   ),
                 ),
                 _DashboardTile(
-                  icon: Icons.list_alt_rounded,
-                  label: 'Patient List',
-                  description: 'View, filter & export patients',
-                  color: const Color(0xFF2E7D32),
+                  icon: Icons.view_list_rounded,
+                  label: 'Patient Register',
+                  description: 'Search records, date filter & PDF export',
+                  color: const Color(0xFF0284C7),
                   onTap: () => Navigator.push(
                     context,
                     MaterialPageRoute(
@@ -119,8 +163,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                 _DashboardTile(
                   icon: Icons.medical_services_rounded,
                   label: 'Manage Doctors',
-                  description: 'Add, edit or toggle doctor availability',
-                  color: const Color(0xFF6A1B9A),
+                  description: 'Doctor directory, roster & specialization',
+                  color: const Color(0xFF6366F1),
                   onTap: () => Navigator.push(
                     context,
                     MaterialPageRoute(
@@ -303,54 +347,138 @@ class _WelcomeBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final hour = DateTime.now().hour;
+    final now = DateTime.now();
+    final hour = now.hour;
     final greeting = hour < 12
         ? 'Good morning'
         : hour < 17
             ? 'Good afternoon'
             : 'Good evening';
 
+    final days = [
+      'Monday',
+      'Tuesday',
+      'Wednesday',
+      'Thursday',
+      'Friday',
+      'Saturday',
+      'Sunday'
+    ];
+    final months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec'
+    ];
+    final dateDisplay =
+        '${days[now.weekday - 1]}, ${now.day} ${months[now.month - 1]} ${now.year}';
+
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
+        gradient: const LinearGradient(
           colors: [
-            colorScheme.primaryContainer,
-            colorScheme.secondaryContainer,
+            Color(0xFF0F766E), // Deep Teal
+            Color(0xFF0369A1), // Sky Marine
           ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF0F766E).withOpacity(0.28),
+            blurRadius: 20,
+            offset: const Offset(0, 8),
+          ),
+        ],
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  '$greeting, $staffName!',
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.18),
+                  borderRadius: BorderRadius.circular(20),
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  '$todayCount patient${todayCount == 1 ? '' : 's'} registered today',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: colorScheme.onSurfaceVariant,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.calendar_today_rounded,
+                        size: 13, color: Colors.white),
+                    const SizedBox(width: 6),
+                    Text(
+                      dateDisplay,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
                       ),
+                    ),
+                  ],
                 ),
-              ],
+              ),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF10B981).withOpacity(0.25),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                      color: const Color(0xFF34D399).withOpacity(0.4)),
+                ),
+                child: const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.check_circle_rounded,
+                        size: 13, color: Color(0xFF6EE7B7)),
+                    SizedBox(width: 6),
+                    Text(
+                      'Live & Synced',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Text(
+            '$greeting, $staffName 👋',
+            style: const TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+              letterSpacing: -0.3,
             ),
           ),
-          Icon(
-            Icons.local_hospital_rounded,
-            size: 48,
-            color: colorScheme.primary,
+          const SizedBox(height: 6),
+          Text(
+            todayCount == 0
+                ? 'Ready for today\'s clinical registrations.'
+                : '$todayCount patient visit${todayCount == 1 ? '' : 's'} registered today.',
+            style: TextStyle(
+              fontSize: 14,
+              color: Colors.white.withOpacity(0.85),
+            ),
           ),
         ],
       ),
@@ -375,54 +503,84 @@ class _DashboardTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      clipBehavior: Clip.antiAlias,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: InkWell(
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: color.withOpacity(0.12),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(icon, size: 32, color: color),
-              ),
-              const SizedBox(height: 16),
-              Text(
-                label,
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.03),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(18),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(18),
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Row(
+              children: [
+                Container(
+                  width: 56,
+                  height: 56,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        color.withOpacity(0.15),
+                        color.withOpacity(0.08),
+                      ],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
                     ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                description,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
-                    ),
-              ),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  Text(
-                    'Open',
-                    style: TextStyle(
-                      color: color,
-                      fontWeight: FontWeight.w600,
-                      fontSize: 13,
-                    ),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: color.withOpacity(0.2)),
                   ),
-                  const SizedBox(width: 4),
-                  Icon(Icons.arrow_forward, size: 14, color: color),
-                ],
-              ),
-            ],
+                  child: Icon(icon, size: 28, color: color),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        label,
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF0F172A),
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        description,
+                        style: const TextStyle(
+                          fontSize: 13,
+                          color: Color(0xFF64748B),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: color.withOpacity(0.08),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.arrow_forward_ios_rounded,
+                    size: 14,
+                    color: color,
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -446,26 +604,49 @@ class _LiveStatsRow extends StatelessWidget {
             .where((p) => (p as dynamic).visitDate == dateStr)
             .length;
 
+        final monthStr =
+            '${today.year}-${today.month.toString().padLeft(2, '0')}';
+        final monthPat = patients
+            .where((p) => (p as dynamic).visitDate.startsWith(monthStr))
+            .length;
+
         return Row(
           children: [
-            Expanded(child: _StatChip(label: 'All Time', value: total)),
-            const SizedBox(width: 12),
-            Expanded(child: _StatChip(label: 'Today', value: todayPat)),
+            Expanded(
+              child: _StatChip(
+                label: "Today's Visits",
+                value: todayPat,
+                icon: Icons.today_rounded,
+                color: const Color(0xFF0F766E),
+              ),
+            ),
             const SizedBox(width: 12),
             Expanded(
               child: _StatChip(
                 label: 'This Month',
-                value: patients
-                    .where((p) =>
-                        (p as dynamic).visitDate.startsWith(
-                            '${today.year}-${today.month.toString().padLeft(2, '0')}'))
-                    .length,
+                value: monthPat,
+                icon: Icons.calendar_month_rounded,
+                color: const Color(0xFF0284C7),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _StatChip(
+                label: 'All-Time Records',
+                value: total,
+                icon: Icons.folder_shared_rounded,
+                color: const Color(0xFF6366F1),
               ),
             ),
           ],
         );
       },
-      loading: () => const LinearProgressIndicator(),
+      loading: () => const Center(
+        child: Padding(
+          padding: EdgeInsets.all(16),
+          child: CircularProgressIndicator(strokeWidth: 2),
+        ),
+      ),
       error: (_, __) => const SizedBox.shrink(),
     );
   }
@@ -474,29 +655,65 @@ class _LiveStatsRow extends StatelessWidget {
 class _StatChip extends StatelessWidget {
   final String label;
   final int value;
-  const _StatChip({required this.label, required this.value});
+  final IconData icon;
+  final Color color;
+
+  const _StatChip({
+    required this.label,
+    required this.value,
+    required this.icon,
+    required this.color,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 14),
       decoration: BoxDecoration(
-        color: colorScheme.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(12),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.02),
+            blurRadius: 8,
+            offset: const Offset(0, 3),
+          ),
+        ],
       ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            value.toString(),
-            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                value.toString(),
+                style: TextStyle(
+                  fontSize: 22,
                   fontWeight: FontWeight.bold,
-                  color: colorScheme.primary,
+                  color: color,
                 ),
+              ),
+              Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(icon, size: 16, color: color),
+              ),
+            ],
           ),
-          Text(label,
-              style: Theme.of(context).textTheme.labelSmall,
-              textAlign: TextAlign.center),
+          const SizedBox(height: 6),
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: Color(0xFF64748B),
+            ),
+          ),
         ],
       ),
     );

@@ -1,8 +1,11 @@
 // lib/services/update_service.dart
-// Handles in-app update checks via Firebase Firestore.
+// Handles in-app update checks via Firebase Firestore and In-App Auto-Installer (ota_update).
 
+import 'dart:io' show Platform;
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:ota_update/ota_update.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class AppUpdateInfo {
@@ -34,8 +37,8 @@ class AppUpdateInfo {
 }
 
 class UpdateService {
-  static const String currentVersion = '1.0.1';
-  static const int currentVersionCode = 2;
+  static const String currentVersion = '1.0.2';
+  static const int currentVersionCode = 3;
   static const String developerName = 'Samrat Khan';
 
   final FirebaseFirestore _db = FirebaseFirestore.instance;
@@ -127,77 +130,283 @@ class UpdateService {
   }
 }
 
-class _UpdateDialog extends StatelessWidget {
+class _UpdateDialog extends StatefulWidget {
   final AppUpdateInfo info;
   const _UpdateDialog({required this.info});
 
   @override
+  State<_UpdateDialog> createState() => _UpdateDialogState();
+}
+
+class _UpdateDialogState extends State<_UpdateDialog> {
+  bool _isDownloading = false;
+  double _progressValue = 0.0;
+  String _progressText = '0%';
+  String _statusText = '';
+  String? _errorMessage;
+
+  Future<void> _startUpdate() async {
+    // If running on Web or Desktop, direct to browser download
+    if (kIsWeb || !Platform.isAndroid) {
+      UpdateService.launchUpdateUrl(widget.info.downloadUrl);
+      if (!widget.info.isMandatory && mounted) Navigator.pop(context);
+      return;
+    }
+
+    setState(() {
+      _isDownloading = true;
+      _errorMessage = null;
+      _statusText = 'Connecting to server…';
+      _progressValue = 0.0;
+      _progressText = '0%';
+    });
+
+    try {
+      OtaUpdate()
+          .execute(
+        widget.info.downloadUrl,
+        destinationFilename:
+            'ClinicManager_v${widget.info.latestVersion}.apk',
+      )
+          .listen(
+        (OtaEvent event) {
+          if (!mounted) return;
+          switch (event.status) {
+            case OtaStatus.DOWNLOADING:
+              final parsed = double.tryParse(event.value ?? '0') ?? 0.0;
+              setState(() {
+                _progressValue = (parsed / 100).clamp(0.0, 1.0);
+                _progressText = '${parsed.toInt()}%';
+                _statusText = 'Downloading update… $_progressText';
+              });
+              break;
+            case OtaStatus.INSTALLING:
+              setState(() {
+                _statusText = 'Launching installer…';
+                _progressValue = 1.0;
+                _progressText = '100%';
+                _isDownloading = false;
+              });
+              break;
+            case OtaStatus.ALREADY_RUNNING_ERROR:
+              setState(() {
+                _errorMessage =
+                    'An update download is already running in background.';
+                _isDownloading = false;
+              });
+              break;
+            case OtaStatus.PERMISSION_NOT_GRANTED_ERROR:
+              setState(() {
+                _errorMessage =
+                    'Install permission not granted. Please enable "Install unknown apps" for Clinic Manager in Android Settings.';
+                _isDownloading = false;
+              });
+              break;
+            case OtaStatus.INTERNAL_ERROR:
+            case OtaStatus.DOWNLOAD_ERROR:
+            case OtaStatus.CHECKSUM_ERROR:
+            default:
+              setState(() {
+                _errorMessage =
+                    'Auto-installer notice: ${event.value ?? event.status.name}. You can download directly via browser.';
+                _isDownloading = false;
+              });
+              break;
+          }
+        },
+        onError: (e) {
+          if (!mounted) return;
+          setState(() {
+            _errorMessage = 'Download error: $e';
+            _isDownloading = false;
+          });
+        },
+      );
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _errorMessage = 'Could not start auto-installer: $e';
+        _isDownloading = false;
+      });
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    final isMandatory = widget.info.isMandatory;
+
     return PopScope(
-      canPop: !info.isMandatory,
+      canPop: !isMandatory && !_isDownloading,
       child: AlertDialog(
-        icon: Icon(
-          Icons.system_update_rounded,
-          size: 48,
-          color: theme.colorScheme.primary,
+        icon: Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: const Color(0xFF0F766E).withOpacity(0.12),
+            shape: BoxShape.circle,
+          ),
+          child: const Icon(
+            Icons.system_update_rounded,
+            size: 38,
+            color: Color(0xFF0F766E),
+          ),
         ),
         title: const Text(
-          'New Update Available! 🚀',
+          'App Update Available! 🚀',
           textAlign: TextAlign.center,
-          style: TextStyle(fontWeight: FontWeight.bold),
+          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
         ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Center(
               child: Container(
                 padding:
                     const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
-                  color: theme.colorScheme.primaryContainer,
+                  color: const Color(0xFFF1F5F9),
                   borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: const Color(0xFFCBD5E1)),
                 ),
                 child: Text(
-                  'v${UpdateService.currentVersion} ➔ v${info.latestVersion}',
-                  style: TextStyle(
+                  'v${UpdateService.currentVersion} ➔ v${widget.info.latestVersion}',
+                  style: const TextStyle(
                     fontWeight: FontWeight.bold,
-                    color: theme.colorScheme.onPrimaryContainer,
+                    color: Color(0xFF0F766E),
+                    fontSize: 13,
                   ),
                 ),
               ),
             ),
             const SizedBox(height: 16),
             const Text(
-              "What's New:",
-              style: TextStyle(fontWeight: FontWeight.bold),
+              "What's New in this update:",
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
             ),
             const SizedBox(height: 6),
-            Text(
-              info.releaseNotes,
-              style: theme.textTheme.bodyMedium,
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF8FAFC),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: const Color(0xFFE2E8F0)),
+              ),
+              child: Text(
+                widget.info.releaseNotes,
+                style: const TextStyle(fontSize: 13, color: Color(0xFF334155)),
+              ),
             ),
-            const SizedBox(height: 12),
-            Text(
-              'A new update is available. Tap below to download and install the latest features.',
-              style: theme.textTheme.bodySmall?.copyWith(color: Colors.grey),
-            ),
+            const SizedBox(height: 16),
+
+            // Live In-App Auto-Installer Progress Section
+            if (_isDownloading || _statusText.isNotEmpty) ...[
+              Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF0FDF4),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: const Color(0xFFBBF7D0)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Expanded(
+                          child: Text(
+                            _statusText,
+                            style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF166534),
+                            ),
+                          ),
+                        ),
+                        Text(
+                          _progressText,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF166534),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: LinearProgressIndicator(
+                        value: _progressValue > 0 ? _progressValue : null,
+                        backgroundColor: const Color(0xFFDCFCE7),
+                        color: const Color(0xFF0F766E),
+                        minHeight: 8,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 10),
+            ],
+
+            // Error display with fallback
+            if (_errorMessage != null) ...[
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: Colors.amber.shade50,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: Colors.amber.shade300),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(Icons.info_outline_rounded,
+                        size: 16, color: Colors.amber.shade900),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        _errorMessage!,
+                        style: TextStyle(
+                            fontSize: 11, color: Colors.amber.shade900),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 8),
+            ],
           ],
         ),
         actions: [
-          if (!info.isMandatory)
+          if (!isMandatory && !_isDownloading)
             TextButton(
               onPressed: () => Navigator.pop(context),
               child: const Text('Later'),
             ),
+          if (_errorMessage != null)
+            TextButton.icon(
+              icon: const Icon(Icons.open_in_browser_rounded, size: 16),
+              label: const Text('Open in Browser'),
+              onPressed: () {
+                UpdateService.launchUpdateUrl(widget.info.downloadUrl);
+                if (!isMandatory) Navigator.pop(context);
+              },
+            ),
           FilledButton.icon(
-            onPressed: () {
-              UpdateService.launchUpdateUrl(info.downloadUrl);
-              if (!info.isMandatory) Navigator.pop(context);
-            },
-            icon: const Icon(Icons.download_rounded),
-            label: const Text('Update Now'),
+            onPressed: _isDownloading ? null : _startUpdate,
+            icon: _isDownloading
+                ? const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(
+                        strokeWidth: 2, color: Colors.white),
+                  )
+                : const Icon(Icons.download_rounded),
+            label: Text(_isDownloading ? 'Downloading…' : 'Update & Install Now'),
+            style: FilledButton.styleFrom(
+              backgroundColor: const Color(0xFF0F766E),
+            ),
           ),
         ],
       ),

@@ -331,7 +331,6 @@ class _PatientCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final colorScheme = Theme.of(context).colorScheme;
     final visitDateFormatted = patient.visitDate.isNotEmpty
         ? DateFormat('dd MMM yyyy')
             .format(DateTime.parse(patient.visitDate))
@@ -339,71 +338,134 @@ class _PatientCard extends ConsumerWidget {
     final timeFormatted =
         DateFormat('hh:mm a').format(patient.createdAt.toLocal());
 
-    return Card(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.02),
+            blurRadius: 8,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
       child: Padding(
-        padding: const EdgeInsets.all(14),
+        padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Serial badge
+                // Modern serial badge
                 Container(
-                  width: 42,
-                  height: 42,
+                  width: 46,
+                  height: 46,
                   alignment: Alignment.center,
                   decoration: BoxDecoration(
-                    color: colorScheme.primaryContainer,
-                    borderRadius: BorderRadius.circular(10),
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFF0F766E), Color(0xFF0284C7)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFF0F766E).withOpacity(0.25),
+                        blurRadius: 8,
+                        offset: const Offset(0, 3),
+                      ),
+                    ],
                   ),
                   child: Text(
-                    patient.serialNumber.toString(),
-                    style: TextStyle(
+                    '#${patient.serialNumber}',
+                    style: const TextStyle(
                       fontWeight: FontWeight.bold,
-                      color: colorScheme.onPrimaryContainer,
-                      fontSize: 16,
+                      color: Colors.white,
+                      fontSize: 15,
                     ),
                   ),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: 14),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
                         patient.name,
-                        style: Theme.of(context)
-                            .textTheme
-                            .titleMedium
-                            ?.copyWith(fontWeight: FontWeight.bold),
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF0F172A),
+                        ),
                       ),
+                      const SizedBox(height: 2),
                       Text(
-                        '${patient.age} yr • ${patient.gender}${patient.phone != null ? ' • ${patient.phone}' : ''}',
-                        style: Theme.of(context)
-                            .textTheme
-                            .bodySmall
-                            ?.copyWith(
-                                color: colorScheme.onSurfaceVariant),
+                        '${patient.age} yrs • ${patient.gender}${patient.phone != null ? ' • 📞 ${patient.phone}' : ''}',
+                        style: const TextStyle(
+                          fontSize: 13,
+                          color: Color(0xFF64748B),
+                        ),
                       ),
                     ],
                   ),
                 ),
                 // Sync indicator
                 if (!patient.isSynced)
-                  Tooltip(
-                    message: 'Pending sync',
-                    child: Icon(Icons.cloud_off,
-                        size: 16,
-                        color: colorScheme.error.withOpacity(0.7)),
+                  Container(
+                    margin: const EdgeInsets.only(right: 6),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: Colors.orange.shade50,
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(color: Colors.orange.shade200),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.cloud_off_rounded,
+                            size: 12, color: Colors.orange.shade800),
+                        const SizedBox(width: 4),
+                        Text(
+                          'Offline',
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.orange.shade800,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 PopupMenuButton<String>(
+                  icon: const Icon(Icons.more_vert_rounded,
+                      color: Color(0xFF64748B)),
                   itemBuilder: (_) => [
                     const PopupMenuItem(
-                        value: 'token', child: Text('Print Token')),
+                      value: 'token',
+                      child: Row(
+                        children: [
+                          Icon(Icons.print_rounded, size: 18),
+                          SizedBox(width: 8),
+                          Text('Print Token Receipt'),
+                        ],
+                      ),
+                    ),
                     const PopupMenuItem(
-                        value: 'delete', child: Text('Delete')),
+                      value: 'delete',
+                      child: Row(
+                        children: [
+                          Icon(Icons.delete_outline_rounded,
+                              size: 18, color: Colors.red),
+                          SizedBox(width: 8),
+                          Text('Delete Record',
+                              style: TextStyle(color: Colors.red)),
+                        ],
+                      ),
+                    ),
                   ],
                   onSelected: (action) async {
                     if (action == 'token') {
@@ -412,9 +474,9 @@ class _PatientCard extends ConsumerWidget {
                       final confirm = await showDialog<bool>(
                         context: context,
                         builder: (_) => AlertDialog(
-                          title: const Text('Delete Patient?'),
+                          title: const Text('Delete Patient Record?'),
                           content: Text(
-                              'Remove ${patient.name} from records?'),
+                              'Are you sure you want to delete ${patient.name}\'s record?'),
                           actions: [
                             TextButton(
                                 onPressed: () =>
@@ -424,7 +486,7 @@ class _PatientCard extends ConsumerWidget {
                               onPressed: () =>
                                   Navigator.pop(context, true),
                               style: FilledButton.styleFrom(
-                                  backgroundColor: colorScheme.error),
+                                  backgroundColor: Colors.red),
                               child: const Text('Delete'),
                             ),
                           ],
@@ -440,41 +502,67 @@ class _PatientCard extends ConsumerWidget {
                 ),
               ],
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: 12),
             Wrap(
               spacing: 8,
-              runSpacing: 4,
+              runSpacing: 6,
               children: [
                 _Chip(
                   icon: Icons.medical_services_outlined,
-                  label: patient.doctorName,
-                  color: colorScheme.secondaryContainer,
+                  label: 'Dr. ${patient.doctorName}',
+                  color: const Color(0xFF0F766E).withOpacity(0.08),
+                  textColor: const Color(0xFF0F766E),
                 ),
                 _Chip(
-                  icon: Icons.calendar_today,
+                  icon: Icons.calendar_today_rounded,
                   label: visitDateFormatted,
-                  color: colorScheme.tertiaryContainer,
+                  color: const Color(0xFF0284C7).withOpacity(0.08),
+                  textColor: const Color(0xFF0284C7),
                 ),
                 _Chip(
-                  icon: Icons.access_time,
+                  icon: Icons.access_time_rounded,
                   label: timeFormatted,
-                  color: colorScheme.surfaceContainerHighest,
+                  color: const Color(0xFFF1F5F9),
+                  textColor: const Color(0xFF475569),
                 ),
                 _Chip(
-                  icon: Icons.person_outline,
-                  label: patient.addedByStaff,
-                  color: colorScheme.surfaceContainerHighest,
+                  icon: Icons.badge_outlined,
+                  label: 'Added by ${patient.addedByStaff}',
+                  color: const Color(0xFFF1F5F9),
+                  textColor: const Color(0xFF475569),
                 ),
               ],
             ),
             if (patient.complaint != null &&
                 patient.complaint!.isNotEmpty) ...[
-              const SizedBox(height: 8),
-              Text(
-                'Complaint: ${patient.complaint}',
-                style: Theme.of(context).textTheme.bodySmall,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
+              const SizedBox(height: 10),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF8FAFC),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Icon(Icons.info_outline_rounded,
+                        size: 14, color: Color(0xFF64748B)),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        'Complaint: ${patient.complaint}',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: Color(0xFF475569),
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ],
           ],
@@ -488,23 +576,37 @@ class _Chip extends StatelessWidget {
   final IconData icon;
   final String label;
   final Color color;
-  const _Chip(
-      {required this.icon, required this.label, required this.color});
+  final Color? textColor;
+
+  const _Chip({
+    required this.icon,
+    required this.label,
+    required this.color,
+    this.textColor,
+  });
 
   @override
   Widget build(BuildContext context) {
+    final effectiveTextColor = textColor ?? const Color(0xFF1E293B);
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
         color: color,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(8),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 12),
-          const SizedBox(width: 4),
-          Text(label, style: const TextStyle(fontSize: 11)),
+          Icon(icon, size: 13, color: effectiveTextColor),
+          const SizedBox(width: 5),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: effectiveTextColor,
+            ),
+          ),
         ],
       ),
     );
