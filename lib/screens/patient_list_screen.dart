@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
+import '../models/doctor.dart';
 import '../models/patient.dart';
 import '../providers/doctor_provider.dart';
 import '../providers/patient_provider.dart';
@@ -67,6 +68,22 @@ class _PatientListScreenState extends ConsumerState<PatientListScreen> {
     });
   }
 
+  void _openPdfExportDialog(
+    BuildContext context,
+    List<Patient> patients,
+    List<Doctor> doctors,
+  ) {
+    showDialog(
+      context: context,
+      builder: (_) => _PdfExportDialog(
+        allPatients: patients,
+        doctors: doctors,
+        initialDoctorId: _filterDoctorId,
+        initialDate: _filterDate,
+      ),
+    );
+  }
+
   Future<void> _exportPdf(List<Patient> patients) async {
     final doctor = _filterDoctorId != null
         ? patients.firstOrNull?.doctorName
@@ -96,11 +113,12 @@ class _PatientListScreenState extends ConsumerState<PatientListScreen> {
         actions: [
           patientsAsync.when(
             data: (patients) {
-              final filtered = _applyFilters(patients);
+              final doctors = doctorsAsync.valueOrNull ?? [];
               return IconButton(
                 icon: const Icon(Icons.picture_as_pdf_outlined),
-                tooltip: 'Export to PDF',
-                onPressed: () => _exportPdf(filtered),
+                tooltip: 'Export to PDF (Date Range)',
+                onPressed: () =>
+                    _openPdfExportDialog(context, patients, doctors),
               );
             },
             loading: () => const SizedBox.shrink(),
@@ -489,6 +507,393 @@ class _Chip extends StatelessWidget {
           Text(label, style: const TextStyle(fontSize: 11)),
         ],
       ),
+    );
+  }
+}
+
+class _PdfExportDialog extends StatefulWidget {
+  final List<Patient> allPatients;
+  final List<Doctor> doctors;
+  final String? initialDoctorId;
+  final DateTime? initialDate;
+
+  const _PdfExportDialog({
+    required this.allPatients,
+    required this.doctors,
+    this.initialDoctorId,
+    this.initialDate,
+  });
+
+  @override
+  State<_PdfExportDialog> createState() => _PdfExportDialogState();
+}
+
+class _PdfExportDialogState extends State<_PdfExportDialog> {
+  late DateTime _startDate;
+  late DateTime _endDate;
+  String? _selectedDoctorId;
+  String _activePreset = 'today';
+  bool _isGenerating = false;
+
+  @override
+  void initState() {
+    super.initState();
+    final today = DateTime.now();
+    _startDate = widget.initialDate ?? today;
+    _endDate = widget.initialDate ?? today;
+    _selectedDoctorId = widget.initialDoctorId;
+    if (widget.initialDate != null) {
+      _activePreset = 'custom';
+    }
+  }
+
+  void _setDatePreset(String preset) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    setState(() {
+      _activePreset = preset;
+      switch (preset) {
+        case 'today':
+          _startDate = today;
+          _endDate = today;
+          break;
+        case 'yesterday':
+          final y = today.subtract(const Duration(days: 1));
+          _startDate = y;
+          _endDate = y;
+          break;
+        case 'week':
+          _startDate = today.subtract(const Duration(days: 6));
+          _endDate = today;
+          break;
+        case 'month':
+          _startDate = DateTime(today.year, today.month, 1);
+          _endDate = DateTime(today.year, today.month + 1, 0);
+          break;
+        case 'all':
+          _startDate = DateTime(2020, 1, 1);
+          _endDate = today.add(const Duration(days: 365));
+          break;
+      }
+    });
+  }
+
+  Future<void> _pickDateRange() async {
+    final picked = await showDateRangePicker(
+      context: context,
+      firstDate: DateTime(2020),
+      lastDate: DateTime.now().add(const Duration(days: 365)),
+      initialDateRange: DateTimeRange(start: _startDate, end: _endDate),
+      helpText: 'Select Date Range for PDF Export',
+      cancelText: 'Cancel',
+      confirmText: 'Select Range',
+    );
+    if (picked != null) {
+      setState(() {
+        _startDate = picked.start;
+        _endDate = picked.end;
+        _activePreset = 'custom';
+      });
+    }
+  }
+
+  List<Patient> get _filteredPatients {
+    final startStr = DateFormat('yyyy-MM-dd').format(_startDate);
+    final endStr = DateFormat('yyyy-MM-dd').format(_endDate);
+
+    final list = widget.allPatients.where((p) {
+      if (p.visitDate.isNotEmpty) {
+        if (p.visitDate.compareTo(startStr) < 0 ||
+            p.visitDate.compareTo(endStr) > 0) {
+          return false;
+        }
+      }
+      if (_selectedDoctorId != null && p.doctorId != _selectedDoctorId) {
+        return false;
+      }
+      return true;
+    }).toList();
+
+    list.sort((a, b) {
+      final cmp = b.visitDate.compareTo(a.visitDate);
+      if (cmp != 0) return cmp;
+      return a.serialNumber.compareTo(b.serialNumber);
+    });
+
+    return list;
+  }
+
+  Future<void> _generatePdf() async {
+    final matching = _filteredPatients;
+    if (matching.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('No patients found for the selected date range and doctor.'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
+    setState(() => _isGenerating = true);
+    try {
+      final startFormatted = DateFormat('dd MMM yyyy').format(_startDate);
+      final endFormatted = DateFormat('dd MMM yyyy').format(_endDate);
+      final dateRangeStr = (startFormatted == endFormatted)
+          ? '$startFormatted (${DateFormat('EEEE').format(_startDate)})'
+          : '$startFormatted – $endFormatted';
+
+      final doctorName = _selectedDoctorId != null
+          ? widget.doctors
+              .firstWhere(
+                (d) => d.id == _selectedDoctorId,
+                orElse: () => Doctor(
+                  id: '',
+                  name: 'Selected Doctor',
+                  specialization: '',
+                  createdAt: DateTime.now(),
+                ),
+              )
+              .name
+          : null;
+
+      Navigator.pop(context);
+
+      await PdfService.printPatientList(
+        patients: matching,
+        title: 'Patient Register',
+        filterDoctor: doctorName != null ? 'Dr. $doctorName' : 'All Doctors',
+        filterDate: dateRangeStr,
+      );
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isGenerating = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to generate PDF: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final matching = _filteredPatients;
+    final startFormatted = DateFormat('dd MMM yyyy').format(_startDate);
+    final endFormatted = DateFormat('dd MMM yyyy').format(_endDate);
+    final isSameDate = startFormatted == endFormatted;
+
+    return AlertDialog(
+      title: const Row(
+        children: [
+          Icon(Icons.picture_as_pdf_rounded, color: Colors.red, size: 28),
+          SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              'Export Patient List',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+          ),
+        ],
+      ),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const Text(
+              'Select a date range and optional doctor to export total patients into a printable PDF report.',
+              style: TextStyle(fontSize: 13, color: Colors.grey),
+            ),
+            const SizedBox(height: 16),
+
+            // Date Range Card
+            InkWell(
+              onTap: _pickDateRange,
+              borderRadius: BorderRadius.circular(12),
+              child: Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.primaryContainer.withOpacity(0.4),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: Theme.of(context).colorScheme.primary.withOpacity(0.3),
+                  ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.date_range_rounded,
+                          size: 18,
+                          color: Theme.of(context).colorScheme.primary,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Selected Date Range',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: Theme.of(context).colorScheme.primary,
+                          ),
+                        ),
+                        const Spacer(),
+                        const Text(
+                          'Change',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.blue,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      isSameDate
+                          ? '$startFormatted (${DateFormat('EEEE').format(_startDate)})'
+                          : '$startFormatted   ➔   $endFormatted',
+                      style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 10),
+
+            // Quick preset chips
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: [
+                  _presetChip('Today', 'today'),
+                  const SizedBox(width: 6),
+                  _presetChip('Yesterday', 'yesterday'),
+                  const SizedBox(width: 6),
+                  _presetChip('Last 7 Days', 'week'),
+                  const SizedBox(width: 6),
+                  _presetChip('This Month', 'month'),
+                  const SizedBox(width: 6),
+                  _presetChip('All Time', 'all'),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+
+            // Doctor filter
+            DropdownButtonFormField<String?>(
+              value: _selectedDoctorId,
+              isExpanded: true,
+              decoration: const InputDecoration(
+                labelText: 'Filter by Doctor',
+                prefixIcon: Icon(Icons.medical_services_outlined),
+                border: OutlineInputBorder(),
+                contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              ),
+              items: [
+                const DropdownMenuItem<String?>(
+                  value: null,
+                  child: Text('All Doctors'),
+                ),
+                ...widget.doctors.map(
+                  (d) => DropdownMenuItem<String?>(
+                    value: d.id,
+                    child: Text('Dr. ${d.name} (${d.specialization})'),
+                  ),
+                ),
+              ],
+              onChanged: (val) => setState(() => _selectedDoctorId = val),
+            ),
+            const SizedBox(height: 16),
+
+            // Match count summary banner
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              decoration: BoxDecoration(
+                color: matching.isNotEmpty
+                    ? Colors.green.shade50
+                    : Colors.amber.shade50,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: matching.isNotEmpty
+                      ? Colors.green.shade200
+                      : Colors.amber.shade300,
+                ),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    matching.isNotEmpty
+                        ? Icons.check_circle_outline_rounded
+                        : Icons.info_outline_rounded,
+                    color: matching.isNotEmpty
+                        ? Colors.green.shade800
+                        : Colors.amber.shade900,
+                    size: 20,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      matching.isNotEmpty
+                          ? '${matching.length} patient record${matching.length == 1 ? '' : 's'} ready for PDF export'
+                          : 'No patients found in this range',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: matching.isNotEmpty
+                            ? Colors.green.shade900
+                            : Colors.amber.shade900,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Cancel'),
+        ),
+        FilledButton.icon(
+          icon: _isGenerating
+              ? const SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Colors.white,
+                  ),
+                )
+              : const Icon(Icons.download_rounded),
+          label: const Text('Generate PDF'),
+          onPressed: _isGenerating ? null : _generatePdf,
+        ),
+      ],
+    );
+  }
+
+  Widget _presetChip(String label, String preset) {
+    final isSelected = _activePreset == preset;
+    return ChoiceChip(
+      label: Text(label),
+      labelStyle: TextStyle(
+        fontSize: 11,
+        color: isSelected ? Colors.white : Colors.black87,
+        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+      ),
+      selected: isSelected,
+      selectedColor: Theme.of(context).colorScheme.primary,
+      onSelected: (_) => _setDatePreset(preset),
     );
   }
 }

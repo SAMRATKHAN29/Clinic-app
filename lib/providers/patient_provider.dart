@@ -76,18 +76,20 @@ class PatientNotifier extends StateNotifier<AsyncValue<List<Patient>>> {
     String? complaint,
     String? diagnosis,
     required String addedByStaff,
+    String? visitDate,
   }) async {
-    final today = DateFormat('yyyy-MM-dd').format(DateTime.now());
+    final appointmentDate =
+        visitDate ?? DateFormat('yyyy-MM-dd').format(DateTime.now());
 
     // Get next serial number — try Firestore first, fall back to SQLite
     int serial;
     bool online = true;
     try {
       serial = await _firestoreService.getNextSerialFromFirestore(
-          doctorId, today);
+          doctorId, appointmentDate);
     } catch (_) {
       online = false;
-      serial = await _sqliteService.getNextSerial(doctorId, today);
+      serial = await _sqliteService.getNextSerial(doctorId, appointmentDate);
     }
 
     final patient = Patient(
@@ -100,7 +102,7 @@ class PatientNotifier extends StateNotifier<AsyncValue<List<Patient>>> {
       doctorId: doctorId,
       doctorName: doctorName,
       serialNumber: serial,
-      visitDate: today,
+      visitDate: appointmentDate,
       complaint: complaint,
       diagnosis: diagnosis,
       addedByStaff: addedByStaff,
@@ -111,11 +113,13 @@ class PatientNotifier extends StateNotifier<AsyncValue<List<Patient>>> {
     // Always save locally first
     await _sqliteService.upsertPatient(patient);
     // Also update local serial counter
-    await _sqliteService.syncSerialCounter(doctorId, today, serial);
+    await _sqliteService.syncSerialCounter(doctorId, appointmentDate, serial);
 
     if (online) {
       try {
         final fsId = await _firestoreService.addPatient(patient);
+        // Remove temporary record from SQLite so it doesn't duplicate
+        await _sqliteService.deletePatient(patient.id);
         final synced = patient.copyWith(id: fsId, isSynced: true);
         await _sqliteService.upsertPatient(synced);
         return synced;

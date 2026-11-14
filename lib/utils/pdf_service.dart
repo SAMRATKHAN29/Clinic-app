@@ -212,7 +212,7 @@ class PdfService {
       mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
       children: [
         pw.Text(
-          'Generated: ${DateFormat('dd MMM yyyy, hh:mm a').format(DateTime.now())}',
+          'Generated: ${DateFormat('dd MMM yyyy, hh:mm a').format(DateTime.now())} • Developed by Samrat Khan',
           style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey500),
         ),
         pw.Text(
@@ -284,6 +284,16 @@ class PdfService {
               _tokenRow('Complaint', patient.complaint!),
             pw.Divider(color: PdfColors.grey300),
             _tokenRow('Added By', patient.addedByStaff),
+            pw.SizedBox(height: 10),
+            pw.Center(
+              child: pw.Text(
+                'Developed by Samrat Khan',
+                style: const pw.TextStyle(
+                  fontSize: 8,
+                  color: PdfColors.grey500,
+                ),
+              ),
+            ),
           ],
         ),
       ),

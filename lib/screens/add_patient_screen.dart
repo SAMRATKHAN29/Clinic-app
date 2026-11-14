@@ -11,7 +11,6 @@ import '../providers/doctor_provider.dart';
 import '../providers/patient_provider.dart';
 import '../models/patient.dart';
 import '../utils/pdf_service.dart';
-import 'manage_doctors_screen.dart';
 
 class AddPatientScreen extends ConsumerStatefulWidget {
   final Patient? editPatient; // non-null when editing
@@ -28,14 +27,15 @@ class _AddPatientScreenState extends ConsumerState<AddPatientScreen> {
   final _ageCtrl = TextEditingController();
   final _phoneCtrl = TextEditingController();
   final _addressCtrl = TextEditingController();
+  final _dateCtrl = TextEditingController();
   final _complaintCtrl = TextEditingController();
   final _diagnosisCtrl = TextEditingController();
 
+  DateTime? _selectedDate;
   String _gender = 'Male';
   String? _selectedDoctorId;
   String? _selectedDoctorName;
   bool _isSaving = false;
-  Patient? _savedPatient;
 
   @override
   void initState() {
@@ -51,6 +51,15 @@ class _AddPatientScreenState extends ConsumerState<AddPatientScreen> {
       _gender = p.gender;
       _selectedDoctorId = p.doctorId;
       _selectedDoctorName = p.doctorName;
+      if (p.visitDate.isNotEmpty) {
+        _selectedDate = DateTime.tryParse(p.visitDate);
+        if (_selectedDate != null) {
+          final dayName = DateFormat('EEEE').format(_selectedDate!);
+          final dateFormatted =
+              DateFormat('dd MMM yyyy').format(_selectedDate!);
+          _dateCtrl.text = '$dateFormatted ($dayName)';
+        }
+      }
     }
   }
 
@@ -60,13 +69,38 @@ class _AddPatientScreenState extends ConsumerState<AddPatientScreen> {
     _ageCtrl.dispose();
     _phoneCtrl.dispose();
     _addressCtrl.dispose();
+    _dateCtrl.dispose();
     _complaintCtrl.dispose();
     _diagnosisCtrl.dispose();
     super.dispose();
   }
 
+  Future<void> _pickAppointmentDate() async {
+    final now = DateTime.now();
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _selectedDate ?? now,
+      firstDate: DateTime(2020),
+      lastDate: DateTime(now.year + 2),
+    );
+
+    if (picked != null) {
+      setState(() {
+        _selectedDate = picked;
+        final dayName = DateFormat('EEEE').format(picked); // e.g. "Monday"
+        final dateFormatted = DateFormat('dd MMM yyyy').format(picked);
+        _dateCtrl.text = '$dateFormatted ($dayName)';
+      });
+    }
+  }
+
   Future<void> _save() async {
+    if (_isSaving) return; // Prevent double taps
     if (!_formKey.currentState!.validate()) return;
+    if (_selectedDate == null) {
+      _showError('Please select appointment date');
+      return;
+    }
     if (_selectedDoctorId == null) {
       _showError('Please select a doctor');
       return;
@@ -75,29 +109,61 @@ class _AddPatientScreenState extends ConsumerState<AddPatientScreen> {
     setState(() => _isSaving = true);
     try {
       final staffName = ref.read(staffNameProvider);
-      final patient = await ref.read(patientNotifierProvider.notifier).addPatient(
-            name: _nameCtrl.text.trim(),
-            age: int.parse(_ageCtrl.text.trim()),
-            gender: _gender,
-            phone: _phoneCtrl.text.trim().isEmpty
-                ? null
-                : _phoneCtrl.text.trim(),
-            address: _addressCtrl.text.trim().isEmpty
-                ? null
-                : _addressCtrl.text.trim(),
-            doctorId: _selectedDoctorId!,
-            doctorName: _selectedDoctorName!,
-            complaint: _complaintCtrl.text.trim().isEmpty
-                ? null
-                : _complaintCtrl.text.trim(),
-            diagnosis: _diagnosisCtrl.text.trim().isEmpty
-                ? null
-                : _diagnosisCtrl.text.trim(),
-            addedByStaff: staffName,
-          );
+      final appointmentDateStr =
+          DateFormat('yyyy-MM-dd').format(_selectedDate!);
+
+      if (widget.editPatient != null) {
+        // Updating existing patient
+        final updated = widget.editPatient!.copyWith(
+          name: _nameCtrl.text.trim(),
+          age: int.parse(_ageCtrl.text.trim()),
+          gender: _gender,
+          phone: _phoneCtrl.text.trim().isEmpty ? null : _phoneCtrl.text.trim(),
+          address:
+              _addressCtrl.text.trim().isEmpty ? null : _addressCtrl.text.trim(),
+          doctorId: _selectedDoctorId!,
+          doctorName: _selectedDoctorName!,
+          visitDate: appointmentDateStr,
+          complaint: _complaintCtrl.text.trim().isEmpty
+              ? null
+              : _complaintCtrl.text.trim(),
+          diagnosis: _diagnosisCtrl.text.trim().isEmpty
+              ? null
+              : _diagnosisCtrl.text.trim(),
+        );
+        await ref
+            .read(patientNotifierProvider.notifier)
+            .updatePatient(updated);
+        setState(() => _isSaving = false);
+        if (mounted) Navigator.pop(context);
+        return;
+      }
+
+      // Adding new patient
+      final patient =
+          await ref.read(patientNotifierProvider.notifier).addPatient(
+                name: _nameCtrl.text.trim(),
+                age: int.parse(_ageCtrl.text.trim()),
+                gender: _gender,
+                phone: _phoneCtrl.text.trim().isEmpty
+                    ? null
+                    : _phoneCtrl.text.trim(),
+                address: _addressCtrl.text.trim().isEmpty
+                    ? null
+                    : _addressCtrl.text.trim(),
+                doctorId: _selectedDoctorId!,
+                doctorName: _selectedDoctorName!,
+                visitDate: appointmentDateStr,
+                complaint: _complaintCtrl.text.trim().isEmpty
+                    ? null
+                    : _complaintCtrl.text.trim(),
+                diagnosis: _diagnosisCtrl.text.trim().isEmpty
+                    ? null
+                    : _diagnosisCtrl.text.trim(),
+                addedByStaff: staffName,
+              );
 
       setState(() {
-        _savedPatient = patient;
         _isSaving = false;
       });
 
@@ -249,13 +315,14 @@ class _AddPatientScreenState extends ConsumerState<AddPatientScreen> {
     _ageCtrl.clear();
     _phoneCtrl.clear();
     _addressCtrl.clear();
+    _dateCtrl.clear();
     _complaintCtrl.clear();
     _diagnosisCtrl.clear();
     setState(() {
       _gender = 'Male';
-      _savedPatient = null;
       _selectedDoctorId = null;
       _selectedDoctorName = null;
+      _selectedDate = null;
     });
   }
 
@@ -358,6 +425,24 @@ class _AddPatientScreenState extends ConsumerState<AddPatientScreen> {
               const SizedBox(height: 20),
 
               _SectionHeader(title: 'Visit Details'),
+              const SizedBox(height: 12),
+
+              // Appointment Date (Mandatory, default blank, auto-computes day of week)
+              TextFormField(
+                controller: _dateCtrl,
+                readOnly: true,
+                onTap: _pickAppointmentDate,
+                decoration: const InputDecoration(
+                  labelText: 'Appointment Date *',
+                  hintText: 'Tap to select appointment date',
+                  prefixIcon: Icon(Icons.calendar_month_rounded),
+                  suffixIcon: Icon(Icons.arrow_drop_down),
+                  helperText: 'Day of week is calculated automatically',
+                ),
+                validator: (v) => _selectedDate == null
+                    ? 'Appointment date is required'
+                    : null,
+              ),
               const SizedBox(height: 12),
 
               // Doctor selection (Always visible with inline Quick-Add button)

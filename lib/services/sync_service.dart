@@ -1,7 +1,6 @@
 // lib/services/sync_service.dart
 // Syncs unsynced local patients to Firestore when connectivity is available.
 
-import '../models/patient.dart';
 import 'firestore_service.dart';
 import 'sqlite_service.dart';
 
@@ -17,8 +16,13 @@ class SyncService {
       final unsynced = await _sqliteService.getUnsyncedPatients();
       for (final patient in unsynced) {
         try {
-          await _firestoreService.addPatient(patient);
-          await _sqliteService.markPatientSynced(patient.id);
+          final fsId = await _firestoreService.addPatient(patient);
+          // Delete old temporary id record to avoid duplication
+          await _sqliteService.deletePatient(patient.id);
+          // Insert synced record with Firestore ID
+          await _sqliteService.upsertPatient(
+            patient.copyWith(id: fsId, isSynced: true),
+          );
         } catch (_) {
           // Skip failed individual records; retry on next sync
         }
