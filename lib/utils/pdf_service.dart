@@ -123,7 +123,7 @@ class PdfService {
       'Gender',
       'Doctor',
       'Complaint',
-      'Staff',
+      'Patient Name Added By',
       'Time',
     ];
 
@@ -283,7 +283,7 @@ class PdfService {
             if (patient.complaint != null && patient.complaint!.isNotEmpty)
               _tokenRow('Complaint', patient.complaint!),
             pw.Divider(color: PdfColors.grey300),
-            _tokenRow('Added By', patient.addedByStaff),
+            _tokenRow('Patient Name Added By', patient.addedByStaff),
             pw.SizedBox(height: 10),
             pw.Center(
               child: pw.Text(
