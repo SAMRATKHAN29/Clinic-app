@@ -12,7 +12,7 @@ class ManageDoctorsScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final doctorsAsync = ref.watch(doctorsStreamProvider);
+    final doctorsAsync = ref.watch(doctorNotifierProvider);
     final colorScheme = Theme.of(context).colorScheme;
 
     return Scaffold(

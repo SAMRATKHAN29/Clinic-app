@@ -11,6 +11,7 @@ import '../providers/doctor_provider.dart';
 import '../providers/patient_provider.dart';
 import '../models/patient.dart';
 import '../utils/pdf_service.dart';
+import 'manage_doctors_screen.dart';
 
 class AddPatientScreen extends ConsumerStatefulWidget {
   final Patient? editPatient; // non-null when editing
@@ -283,29 +284,96 @@ class _AddPatientScreenState extends ConsumerState<AddPatientScreen> {
 
               // Doctor selection
               doctorsAsync.when(
-                data: (doctors) => DropdownButtonFormField<String>(
-                  value: _selectedDoctorId,
-                  decoration: const InputDecoration(
-                    labelText: 'Assign Doctor *',
-                    prefixIcon: Icon(Icons.medical_services_outlined),
-                  ),
-                  items: doctors
-                      .map((d) => DropdownMenuItem(
-                            value: d.id,
-                            child: Text('${d.name} (${d.specialization})'),
-                          ))
-                      .toList(),
-                  onChanged: (id) {
-                    setState(() {
-                      _selectedDoctorId = id;
-                      _selectedDoctorName =
-                          doctors.firstWhere((d) => d.id == id).name;
+                data: (doctors) {
+                  if (doctors.isEmpty) {
+                    return Container(
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: Colors.amber.shade50,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: Colors.amber.shade300),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Icon(Icons.info_outline,
+                                  color: Colors.amber.shade900),
+                              const SizedBox(width: 8),
+                              const Text(
+                                'No Active Doctors Found',
+                                style: TextStyle(fontWeight: FontWeight.bold),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 6),
+                          const Text(
+                            'Please add a doctor first to register patient serial numbers.',
+                            style: TextStyle(fontSize: 13),
+                          ),
+                          const SizedBox(height: 10),
+                          FilledButton.tonalIcon(
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => const ManageDoctorsScreen(),
+                                ),
+                              );
+                            },
+                            icon: const Icon(Icons.add, size: 18),
+                            label: const Text('Add Doctor'),
+                          ),
+                        ],
+                      ),
+                    );
+                  }
+
+                  // Auto-select first doctor if none selected
+                  if (_selectedDoctorId == null ||
+                      !doctors.any((d) => d.id == _selectedDoctorId)) {
+                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                      if (mounted) {
+                        setState(() {
+                          _selectedDoctorId = doctors.first.id;
+                          _selectedDoctorName = doctors.first.name;
+                        });
+                      }
                     });
-                  },
-                  validator: (_) => _selectedDoctorId == null
-                      ? 'Select a doctor'
-                      : null,
-                ),
+                  }
+
+                  final effectiveValue =
+                      doctors.any((d) => d.id == _selectedDoctorId)
+                          ? _selectedDoctorId
+                          : doctors.first.id;
+
+                  return DropdownButtonFormField<String>(
+                    value: effectiveValue,
+                    decoration: const InputDecoration(
+                      labelText: 'Assign Doctor *',
+                      prefixIcon: Icon(Icons.medical_services_outlined),
+                    ),
+                    items: doctors
+                        .map((d) => DropdownMenuItem(
+                              value: d.id,
+                              child: Text('${d.name} (${d.specialization})'),
+                            ))
+                        .toList(),
+                    onChanged: (id) {
+                      if (id != null) {
+                        setState(() {
+                          _selectedDoctorId = id;
+                          _selectedDoctorName =
+                              doctors.firstWhere((d) => d.id == id).name;
+                        });
+                      }
+                    },
+                    validator: (_) => _selectedDoctorId == null
+                        ? 'Select a doctor'
+                        : null,
+                  );
+                },
                 loading: () => const LinearProgressIndicator(),
                 error: (e, _) => Text('Error loading doctors: $e'),
               ),

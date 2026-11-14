@@ -7,15 +7,29 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../main.dart';
 import '../providers/patient_provider.dart';
+import '../services/update_service.dart';
 import 'add_patient_screen.dart';
 import 'manage_doctors_screen.dart';
 import 'patient_list_screen.dart';
 
-class DashboardScreen extends ConsumerWidget {
+class DashboardScreen extends ConsumerStatefulWidget {
   const DashboardScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<DashboardScreen> createState() => _DashboardScreenState();
+}
+
+class _DashboardScreenState extends ConsumerState<DashboardScreen> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      UpdateService().checkForUpdates(context, silentIfUpToDate: true);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final staffName = ref.watch(staffNameProvider);
     final patientsAsync = ref.watch(patientsStreamProvider);
     final colorScheme = Theme.of(context).colorScheme;
@@ -39,7 +53,7 @@ class DashboardScreen extends ConsumerWidget {
         backgroundColor: colorScheme.primaryContainer,
         actions: [
           Padding(
-            padding: const EdgeInsets.only(right: 12),
+            padding: const EdgeInsets.only(right: 4),
             child: Chip(
               avatar: const Icon(Icons.person, size: 16),
               label: Text(staffName),
@@ -48,9 +62,14 @@ class DashboardScreen extends ConsumerWidget {
             ),
           ),
           IconButton(
-            icon: const Icon(Icons.edit),
+            icon: const Icon(Icons.edit_outlined),
             tooltip: 'Change staff name',
-            onPressed: () => _showChangeNameDialog(context, ref, staffName),
+            onPressed: () => _showChangeNameDialog(context, staffName),
+          ),
+          IconButton(
+            icon: const Icon(Icons.info_outline_rounded),
+            tooltip: 'About app',
+            onPressed: () => _showAboutDialog(context),
           ),
         ],
       ),
@@ -137,14 +156,65 @@ class DashboardScreen extends ConsumerWidget {
 
             // Live stats strip
             _LiveStatsRow(patientsAsync: patientsAsync),
+
+            const SizedBox(height: 32),
+
+            // Developer details footer
+            const Divider(),
+            const SizedBox(height: 12),
+            Center(
+              child: Column(
+                children: [
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.code_rounded,
+                          size: 16, color: colorScheme.primary),
+                      const SizedBox(width: 6),
+                      Text(
+                        'Developed by Samrat Khan',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: colorScheme.primary,
+                          fontSize: 13,
+                          letterSpacing: 0.3,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'A clinical application • v${UpdateService.currentVersion}',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: colorScheme.outline,
+                          fontSize: 11,
+                        ),
+                  ),
+                  const SizedBox(height: 8),
+                  OutlinedButton.icon(
+                    onPressed: () => UpdateService().checkForUpdates(context),
+                    icon: const Icon(Icons.sync_rounded, size: 16),
+                    label: const Text(
+                      'Check for Updates',
+                      style: TextStyle(fontSize: 12),
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      visualDensity: VisualDensity.compact,
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 14, vertical: 6),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
           ],
         ),
       ),
     );
   }
 
-  void _showChangeNameDialog(
-      BuildContext context, WidgetRef ref, String current) {
+  void _showChangeNameDialog(BuildContext context, String current) {
     final ctrl = TextEditingController(text: current);
     showDialog(
       context: context,
@@ -170,6 +240,53 @@ class DashboardScreen extends ConsumerWidget {
               if (context.mounted) Navigator.pop(context);
             },
             child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showAboutDialog(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        icon: Icon(Icons.local_hospital_rounded,
+            size: 48, color: colorScheme.primary),
+        title: const Text('Clinic Manager'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              'A clinical application, developed by Samrat Khan',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'Version ${UpdateService.currentVersion}',
+              style: const TextStyle(color: Colors.grey, fontSize: 13),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'Designed to streamline patient registration, dynamic serial numbering, multi-device real-time synchronization, and PDF token printing.',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 13),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Close'),
+          ),
+          FilledButton.icon(
+            onPressed: () {
+              Navigator.pop(context);
+              UpdateService().checkForUpdates(context);
+            },
+            icon: const Icon(Icons.sync_rounded, size: 16),
+            label: const Text('Check for Updates'),
           ),
         ],
       ),

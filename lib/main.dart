@@ -9,6 +9,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'firebase_options.dart';
 import 'screens/dashboard_screen.dart';
+import 'screens/splash_screen.dart';
 import 'providers/patient_provider.dart';
 
 // Global staff name provider
@@ -71,7 +72,7 @@ class ClinicApp extends StatelessWidget {
           elevation: 0,
         ),
       ),
-      home: const StaffNameGate(),
+      home: const SplashScreen(nextScreen: StaffNameGate()),
     );
   }
 }
@@ -192,6 +193,15 @@ class _StaffNamePromptScreen extends ConsumerWidget {
                         style: FilledButton.styleFrom(
                           padding: const EdgeInsets.symmetric(vertical: 14),
                         ),
+                      ),
+                      const SizedBox(height: 24),
+                      Text(
+                        'A clinical application, developed by Samrat Khan',
+                        textAlign: TextAlign.center,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: colorScheme.outline,
+                              fontWeight: FontWeight.w500,
+                            ),
                       ),
                     ],
                   ),

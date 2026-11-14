@@ -86,7 +86,7 @@ class _PatientListScreenState extends ConsumerState<PatientListScreen> {
   @override
   Widget build(BuildContext context) {
     final patientsAsync = ref.watch(patientsStreamProvider);
-    final doctorsAsync = ref.watch(doctorsStreamProvider);
+    final doctorsAsync = ref.watch(doctorNotifierProvider);
     final colorScheme = Theme.of(context).colorScheme;
 
     return Scaffold(
