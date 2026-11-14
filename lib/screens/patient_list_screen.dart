@@ -31,7 +31,7 @@ class _PatientListScreenState extends ConsumerState<PatientListScreen> {
   }
 
   List<Patient> _applyFilters(List<Patient> all) {
-    return all.where((p) {
+    final filtered = all.where((p) {
       final matchesSearch = _searchQuery.isEmpty ||
           p.name.toLowerCase().contains(_searchQuery.toLowerCase()) ||
           p.phone != null &&
@@ -47,6 +47,14 @@ class _PatientListScreenState extends ConsumerState<PatientListScreen> {
 
       return matchesSearch && matchesDoctor && matchesDate;
     }).toList();
+
+    filtered.sort((a, b) {
+      final cmp = a.visitDate.compareTo(b.visitDate);
+      if (cmp != 0) return cmp;
+      return a.serialNumber.compareTo(b.serialNumber);
+    });
+
+    return filtered;
   }
 
   Future<void> _pickDate() async {
@@ -717,7 +725,7 @@ class _PdfExportDialogState extends State<_PdfExportDialog> {
     }).toList();
 
     list.sort((a, b) {
-      final cmp = b.visitDate.compareTo(a.visitDate);
+      final cmp = a.visitDate.compareTo(b.visitDate);
       if (cmp != 0) return cmp;
       return a.serialNumber.compareTo(b.serialNumber);
     });

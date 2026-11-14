@@ -20,27 +20,35 @@ class PdfService {
     final dateStr = filterDate ??
         DateFormat('dd MMM yyyy').format(DateTime.now());
 
+    // Sort patients in ascending order (by visitDate ascending, then serialNumber ascending)
+    final sortedPatients = List<Patient>.from(patients)
+      ..sort((a, b) {
+        final cmpDate = a.visitDate.compareTo(b.visitDate);
+        if (cmpDate != 0) return cmpDate;
+        return a.serialNumber.compareTo(b.serialNumber);
+      });
+
     pdf.addPage(
       pw.MultiPage(
         pageFormat: PdfPageFormat.a4,
-        margin: const pw.EdgeInsets.all(32),
+        margin: const pw.EdgeInsets.all(28),
         header: (ctx) => _buildHeader(title, dateStr, filterDoctor),
         footer: (ctx) => _buildFooter(ctx),
         build: (ctx) => [
-          if (patients.isEmpty)
+          if (sortedPatients.isEmpty)
             pw.Center(
               child: pw.Text(
                 'No patients found.',
-                style: pw.TextStyle(
+                style: const pw.TextStyle(
                   fontSize: 14,
                   color: PdfColors.grey600,
                 ),
               ),
             )
           else
-            _buildTable(patients),
+            _buildTable(sortedPatients),
           pw.SizedBox(height: 20),
-          _buildSummary(patients),
+          _buildSummary(sortedPatients),
         ],
       ),
     );
@@ -64,7 +72,7 @@ class PdfService {
               children: [
                 pw.Text(
                   'CLINIC MANAGEMENT SYSTEM',
-                  style: pw.TextStyle(
+                  style: const pw.TextStyle(
                     fontSize: 10,
                     color: PdfColors.grey600,
                     letterSpacing: 1,
@@ -103,7 +111,7 @@ class PdfService {
           pw.SizedBox(height: 4),
           pw.Text(
             'Doctor: $doctor',
-            style: pw.TextStyle(
+            style: const pw.TextStyle(
               fontSize: 11,
               color: PdfColors.grey700,
             ),
@@ -122,6 +130,7 @@ class PdfService {
       'Age',
       'Gender',
       'Doctor',
+      'Appointment Date',
       'Complaint',
       'Patient Name Added By',
       'Time',
@@ -129,12 +138,21 @@ class PdfService {
 
     final rows = patients.map((p) {
       final time = DateFormat('hh:mm a').format(p.createdAt.toLocal());
+      String dateStr = p.visitDate;
+      if (p.visitDate.isNotEmpty) {
+        final parsed = DateTime.tryParse(p.visitDate);
+        if (parsed != null) {
+          dateStr = DateFormat('dd MMM yyyy').format(parsed);
+        }
+      }
+
       return [
         p.serialNumber.toString(),
         p.name,
         p.age.toString(),
         p.gender,
         p.doctorName,
+        dateStr,
         p.complaint ?? '—',
         p.addedByStaff,
         time,
@@ -147,17 +165,20 @@ class PdfService {
       border: pw.TableBorder.all(color: PdfColors.grey300, width: 0.5),
       headerStyle: pw.TextStyle(
         fontWeight: pw.FontWeight.bold,
-        fontSize: 9,
+        fontSize: 8,
         color: PdfColors.white,
       ),
       headerDecoration:
           const pw.BoxDecoration(color: PdfColors.blueGrey700),
-      cellStyle: const pw.TextStyle(fontSize: 8.5),
+      cellStyle: const pw.TextStyle(fontSize: 7.5),
+      cellPadding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
       cellAlignments: {
-        0: pw.Alignment.center,
-        2: pw.Alignment.center,
-        3: pw.Alignment.center,
-        7: pw.Alignment.center,
+        0: pw.Alignment.center, // Sr.
+        2: pw.Alignment.center, // Age
+        3: pw.Alignment.center, // Gender
+        5: pw.Alignment.center, // Appointment Date
+        7: pw.Alignment.center, // Patient Name Added By
+        8: pw.Alignment.center, // Time
       },
       rowDecoration: const pw.BoxDecoration(color: PdfColors.white),
       oddRowDecoration:

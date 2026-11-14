@@ -37,8 +37,8 @@ class AppUpdateInfo {
 }
 
 class UpdateService {
-  static const String currentVersion = '1.0.2';
-  static const int currentVersionCode = 3;
+  static const String currentVersion = '1.0.3';
+  static const int currentVersionCode = 4;
   static const String developerName = 'Samrat Khan';
 
   final FirebaseFirestore _db = FirebaseFirestore.instance;
